@@ -1,82 +1,110 @@
 from PyQt5.QtWidgets import QApplication, QMainWindow, QTextEdit, QTableWidget, QTableWidgetItem, QVBoxLayout, QHBoxLayout, QPushButton, QWidget
 import sys
 
+#Definimos las Gramaticas
+def es_identificador(input):
+    if input[0].isalpha():
+        for char in input[1:]:
+            if not (char.isalpha() or char.isdigit()):
+                return False
+        return True
+    return False
+
+def es_entero(input):
+    if input[0].isdigit():
+        for char in input[1:]:
+            if not char.isdigit():
+                return False
+        return True
+    return False
+
+def es_real(input):
+    if not input[0].isdigit():
+        return False
+    elif input[0].isdigit:
+        pos=1
+        for char in input[1:]:
+            if not (char.isdigit() or char == '.'):
+                return False
+            elif char == '.':
+                if '.' in input[pos+1:]:
+                    return False
+            pos += 1
+        if input[-1] == '.':
+            return False
+        return True
+
+#Definimos las clases de tokens
+class Token:
+    def __init__(self, tipo, reglas=None):
+        self.tipo = tipo
+        self.valor = ''
+        self.reglas = reglas
+    
+    def set_valor(self, input):
+            self.valor = input
+    
+    def rule_check(self, input):
+        return self.reglas(input)
+    
+    def return_token(self):
+        return (self.tipo,self.valor)
+
+class Identificador(Token):
+    def __init__(self):
+        super().__init__('identificador', es_identificador)
+
+class Entero(Token):
+    def __init__(self):
+        super().__init__('entero', es_entero)
+
+class Real(Token):
+    def __init__(self):
+        super().__init__('real', es_real)
+
+class Error(Token):
+    def __init__(self):
+        super().__init__('error')
+
+#Definimos el analizador lexico
 class AnalizadorLexico:
     def __init__(self, texto=''):
         self.texto = texto
-        self.pos = 0
 
-    def es_letra(self, char):
-        return char.isalpha()
-
-    def es_digito(self, char):
-        return char.isdigit()
-
-    def obtener_siguiente_token(self):
-        while self.pos < len(self.texto):
-            if self.texto[self.pos].isspace() or self.texto[self.pos] == '\n':
-                self.pos += 1
-            elif self.es_letra(self.texto[self.pos]):
-                inicio = self.pos
-                self.pos += 1
-                while self.pos < len(self.texto) and (self.es_letra(self.texto[self.pos]) or self.es_digito(self.texto[self.pos])):
-                    self.pos += 1
-                if self.texto[self.pos].isspace() or self.texto[self.pos] == '\n':
-                    token = {'tipo': 'identificador', 'valor': self.texto[inicio:self.pos]}
-                    self.pos += 1
-                    return token
-                else:
-                    while self.pos < len(self.texto) and not (self.texto[self.pos].isspace() or self.texto[self.pos] == '\n'):
-                        self.pos += 1
-                    return {'tipo': 'error', 'valor': self.texto[inicio:self.pos]}              
-            elif self.es_digito(self.texto[self.pos]):
-                inicio = self.pos
-                self.pos += 1
-                while self.pos < len(self.texto) and self.es_digito(self.texto[self.pos]):
-                    self.pos += 1
-                if self.texto[self.pos] == '.':
-                    self.pos += 1
-                    if self.texto[self.pos].isspace() or self.texto[self.pos] == '\n':
-                        self.pos += 1
-                        return {'tipo': 'error', 'valor': self.texto[inicio:self.pos]}
-                    elif self.es_digito(self.texto[self.pos]):
-                        while self.pos < len(self.texto) and self.es_digito(self.texto[self.pos]):
-                            self.pos += 1
-                        if self.texto[self.pos].isspace() or self.texto[self.pos] == '\n':
-                            token = {'tipo': 'real', 'valor': self.texto[inicio:self.pos]}
-                            self.pos += 1
-                            return token
-                        else:
-                            while self.pos < len(self.texto) and not (self.texto[self.pos].isspace() or self.texto[self.pos] == '\n'):
-                                self.pos += 1
-                            return {'tipo': 'error', 'valor': self.texto[inicio:self.pos]}
-                    else:
-                        while self.pos < len(self.texto) and not (self.texto[self.pos].isspace() or self.texto[self.pos] == '\n'):
-                            self.pos += 1
-                        return {'tipo': 'error', 'valor': self.texto[inicio:self.pos]}
-                elif self.texto[self.pos].isspace() or self.texto[self.pos] == '\n':
-                    token = {'tipo': 'entero', 'valor': self.texto[inicio:self.pos]}
-                    self.pos += 1
-                    return token
-                else:
-                    while self.pos < len(self.texto) and not (self.texto[self.pos].isspace() or self.texto[self.pos] == '\n'):
-                        self.pos += 1
-                    return {'tipo': 'error', 'valor': self.texto[inicio:self.pos]}
-            else:
-                inicio = self.pos
-                self.pos += 1
-                while self.pos < len(self.texto) and not (self.texto[self.pos].isspace() or self.texto[self.pos] == '\n'):
-                    self.pos += 1
-                return {'tipo': 'error', 'valor': self.texto[inicio:self.pos]}
-
-    def analizar(self):
+    def obtener_tokens(self):
+        identificador = Identificador()
+        entero = Entero()
+        real = Real()
+        error = Error()
+        pos = 0
         tokens = []
-        token = self.obtener_siguiente_token()
-        while token:
-            tokens.append(token)
-            token = self.obtener_siguiente_token()
-        return tokens
+        current_token = ''
+        while pos < len(self.texto):
+            char = self.texto[pos]
+            if (char in ['\n', '\t', ' ']) or (pos == len(self.texto) - 1):
+                if current_token:
 
+                    if pos == len(self.texto) - 1:
+                        current_token += char
+
+                    if identificador.rule_check(current_token):
+                        identificador.set_valor(current_token)
+                        tokens.append(identificador.return_token())
+                    elif entero.rule_check(current_token):
+                        entero.set_valor(current_token)
+                        tokens.append(entero.return_token())
+                    elif real.rule_check(current_token):
+                        real.set_valor(current_token)
+                        tokens.append(real.return_token())
+                    else:
+                        error.set_valor(current_token)
+                        tokens.append(error.return_token())
+                    current_token = ''
+            else:
+                current_token += char
+            pos += 1
+        return tokens
+    
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -117,13 +145,16 @@ class MainWindow(QMainWindow):
     def analyzeText(self):
         text = self.textEdit.toPlainText()
         analizador = AnalizadorLexico(text)
-        tokens = analizador.analizar()
+        tokens = analizador.obtener_tokens()
 
         self.tokensTable.setRowCount(len(tokens))
 
         for i, token in enumerate(tokens):
-            self.tokensTable.setItem(i, 0, QTableWidgetItem(token['tipo']))
-            self.tokensTable.setItem(i, 1, QTableWidgetItem(token['valor']))
+            tipo = QTableWidgetItem(token[0])
+            valor = QTableWidgetItem(token[1])
+
+            self.tokensTable.setItem(i, 0, tipo)
+            self.tokensTable.setItem(i, 1, valor)
 
 
 if __name__ == '__main__':
