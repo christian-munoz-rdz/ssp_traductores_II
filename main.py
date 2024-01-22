@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QApplication, QMainWindow, QTextEdit, QTableWidget, QTableWidgetItem, QVBoxLayout, QHBoxLayout, QPushButton, QWidget
 import sys
 
-#Definimos las Gramaticas
+#Definimos las reglas de los tokens
 def es_identificador(input):
     if input[0].isalpha():
         for char in input[1:]:
@@ -34,7 +34,7 @@ def es_real(input):
             return False
         return True
 
-#Definimos las clases de tokens
+#Definimos la clase Token
 class Token:
     def __init__(self, tipo, reglas=None):
         self.tipo = tipo
@@ -50,6 +50,7 @@ class Token:
     def return_token(self):
         return (self.tipo,self.valor)
 
+#Utilizamos herencia para definir los diferentes tipos de tokens
 class Identificador(Token):
     def __init__(self):
         super().__init__('identificador', es_identificador)
@@ -72,39 +73,46 @@ class AnalizadorLexico:
         self.texto = texto
 
     def obtener_tokens(self):
-        identificador = Identificador()
-        entero = Entero()
-        real = Real()
-        error = Error()
-        pos = 0
-        tokens = []
-        current_token = ''
-        while pos < len(self.texto):
-            char = self.texto[pos]
-            if (char in ['\n', '\t', ' ']) or (pos == len(self.texto) - 1):
-                if current_token:
+            """
+            Esta función analiza el texto y devuelve una lista de tokens encontrados.
+            
+            Returns:
+                list: Lista de tokens encontrados en el texto.
+            """
+            identificador = Identificador()
+            entero = Entero()
+            real = Real()
+            error = Error()
+            pos = 0
+            tokens = []
+            current_token = ''
+            while pos < len(self.texto):
+                char = self.texto[pos]
+                if (char in ['\n', '\t', ' ']) or (pos == len(self.texto) - 1):
+                    if current_token:
 
-                    if pos == len(self.texto) - 1:
-                        current_token += char
+                        if pos == len(self.texto) - 1:
+                            current_token += char
 
-                    if identificador.rule_check(current_token):
-                        identificador.set_valor(current_token)
-                        tokens.append(identificador.return_token())
-                    elif entero.rule_check(current_token):
-                        entero.set_valor(current_token)
-                        tokens.append(entero.return_token())
-                    elif real.rule_check(current_token):
-                        real.set_valor(current_token)
-                        tokens.append(real.return_token())
-                    else:
-                        error.set_valor(current_token)
-                        tokens.append(error.return_token())
-                    current_token = ''
-            else:
-                current_token += char
-            pos += 1
-        return tokens
-    
+                        if identificador.rule_check(current_token):
+                            identificador.set_valor(current_token)
+                            tokens.append(identificador.return_token())
+                        elif entero.rule_check(current_token):
+                            entero.set_valor(current_token)
+                            tokens.append(entero.return_token())
+                        elif real.rule_check(current_token):
+                            real.set_valor(current_token)
+                            tokens.append(real.return_token())
+                        else:
+                            error.set_valor(current_token)
+                            tokens.append(error.return_token())
+                        current_token = ''
+                else:
+                    current_token += char
+                pos += 1
+            return tokens
+
+#Definimos la interfaz grafica   
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -122,7 +130,7 @@ class MainWindow(QMainWindow):
         # Componentes
         self.textEdit = QTextEdit()
         self.analyzeButton = QPushButton("Analizar")
-        self.analyzeButton.clicked.connect(self.analyzeText)
+        self.analyzeButton.clicked.connect(self.analyzeText) # Conectar el evento click del botón con el método analyzeText
 
         self.tokensTable = QTableWidget()
         self.tokensTable.setColumnCount(2)
@@ -143,12 +151,16 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(centralWidget)
 
     def analyzeText(self):
-        text = self.textEdit.toPlainText()
-        analizador = AnalizadorLexico(text)
-        tokens = analizador.obtener_tokens()
+        """
+        Analiza el texto ingresado en el widget de texto y muestra los tokens en una tabla.
+        """
+        text = self.textEdit.toPlainText() # Obtenemos el texto del widget de texto
+        analizador = AnalizadorLexico(text) # Creamos una instancia del analizador léxico con el texto ingresado
+        tokens = analizador.obtener_tokens() # Obtenemos los tokens del analizador léxico
 
         self.tokensTable.setRowCount(len(tokens))
 
+        # Mostramos los tokens en la tabla
         for i, token in enumerate(tokens):
             tipo = QTableWidgetItem(token[0])
             valor = QTableWidgetItem(token[1])
@@ -156,7 +168,7 @@ class MainWindow(QMainWindow):
             self.tokensTable.setItem(i, 0, tipo)
             self.tokensTable.setItem(i, 1, valor)
 
-
+#Ejecutamos la interfaz grafica
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     mainWin = MainWindow()
