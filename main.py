@@ -34,6 +34,112 @@ def es_real(input):
             return False
         return True
 
+def es_cadena(input):
+    if input[0] == '"' and input[-1] == '"':
+        return True
+    return False
+
+def es_tipo_dato(input):
+    if input in ['int', 'float', 'void']:
+        return True
+    return False
+
+def es_suma_resta(input):
+    if input == '+' or input == '-':
+        return True
+    return False
+
+def es_mult_div(input):
+    if input == '*' or input == '/':
+        return True
+    return False
+
+def es_operador_relacional(input):
+    if input in ['<', '>', '<=', '>=']:
+        return True
+    return False
+
+def es_or(input):
+    if input == '||':
+        return True
+    return False
+
+def es_and(input):
+    if input == '&&':
+        return True
+    return False
+
+def es_not(input):
+    if input == '!':
+        return True
+    return False
+
+def es_igualdad_desigualdad(input):
+    if input == '==' or input == '!=':
+        return True
+    return False
+
+def es_punto_y_coma(input):
+    if input == ';':
+        return True
+    return False
+
+def es_coma(input):
+    if input == ',':
+        return True
+    return False
+
+def es_parentesis_izquierdo(input):
+    if input == '(':
+        return True
+    return False
+
+def es_parentesis_derecho(input):
+    if input == ')':
+        return True
+    return False
+
+def es_llave_izquierda(input):
+    if input == '{':
+        return True
+    return False
+
+def es_llave_derecha(input):
+    if input == '}':
+        return True
+    return False
+
+def es_asignacion(input):
+    if input == '=':
+        return True
+    return False
+
+def es_if(input):
+    if input == 'if':
+        return True
+    return False
+
+def es_while(input):
+    if input == 'while':
+        return True
+    return False
+
+def es_return(input):
+    if input == 'return':
+        return True
+    return False
+
+def es_else(input):
+    if input == 'else':
+        return True
+    return False
+
+def es_peso(input):
+    if input == '$':
+        return True
+    return False
+
+
 #Definimos la clase Token
 class Token:
     def __init__(self, tipo, reglas=None):
