@@ -139,20 +139,6 @@ grammar_rules_grammar_2 = {
     'E -> id + E': ('E', 3)  
 }
 
-
-# Grammar rules and parsing table for the first grammar
-grammar_rules_1 = {
-    'r1': ('E', 3)  # E -> id + id
-}
-
-parsing_table_1 = {
-    (0, 'id'): ('s', 2),
-    (1, '$'): ('acc', ''),
-    (2, '+'): ('s', 3),
-    (3, 'id'): ('s', 4),
-    (4, '$'): ('r', 'r1')
-}
-
 analyzer_grammar_1 = SyntacticAnalyzerOO(action_table_grammar_1, goto_table_grammar_1, grammar_rules_grammar_1)
 analyzer_grammar_2 = SyntacticAnalyzerOO(action_table_grammar_2, goto_table_grammar_2, grammar_rules_grammar_2)
 
