@@ -67,7 +67,7 @@ def tokenize(input_string):
             if current_token:
                 tokens.append('id')
                 current_token = ''
-            if char in ['+']:
+            if char == '+':
                 tokens.append(char)
     if current_token:
         tokens.append('id')
