@@ -1,69 +1,109 @@
-def es_letra(c):
-    return c.isalpha()
+def es_letra(caracter):
+    return caracter.isalpha()
 
-def es_digito(c):
-    return c.isdigit()
+def es_digito(caracter):
+    return caracter.isdigit()
 
-def es_identificador(token):
-    return es_letra(token[0]) and all(es_letra(c) or es_digito(c) for c in token[1:])
+# Mapeo de tokens a números según las imágenes proporcionadas.
+TOKEN_MAP = {
+    'IDENTIFICADOR': 0,
+    'ENTERO': 1,
+    'REAL': 2,
+    'OPSUMA': 5,  # '+', '-'
+    'OPMUL': 6,   # '*', '/'
+    'OPRELAC': 7, # '<', '>', '<=', '>=', '!=', '=='
+    'OPOR': 8,    # '||'
+    'OPAND': 9,   # '&&'
+    'OPNOT': 10,  # '!'
+    'PARENTESIS': 14,  # '(', ')'
+    'LLAVE': 16,       # '{', '}'
+    'PUNTOYCOMA': 12,  # ';'
+    # Para las palabras reservadas, usaremos su representación en mayúsculas como clave
+    'IF': 19,
+    'WHILE': 20,
+    'RETURN': 21,
+    'ELSE': 22,
+    'INT': 23,
+    'FLOAT': 24,
+}
+
+# Lista de palabras reservadas para verificación rápida.
+PALABRAS_RESERVADAS = {'if', 'while', 'return', 'else', 'int', 'float'}
+
+def obtener_token(cadena, indice):
+    token = ''
+    longitud = len(cadena)
+
+    # Identificadores y palabras reservadas
+    if es_letra(cadena[indice]):
+        while indice < longitud and (es_letra(cadena[indice]) or es_digito(cadena[indice])):
+            token += cadena[indice]
+            indice += 1
+        tipo_token = token.upper() if token.lower() in PALABRAS_RESERVADAS else 'IDENTIFICADOR'
+    
+    # Números enteros y reales
+    elif es_digito(cadena[indice]):
+        while indice < longitud and es_digito(cadena[indice]):
+            token += cadena[indice]
+            indice += 1
+        if indice < longitud and cadena[indice] == '.':
+            token += cadena[indice]
+            indice += 1
+            while indice < longitud and es_digito(cadena[indice]):
+                token += cadena[indice]
+                indice += 1
+            tipo_token = 'REAL'
+        else:
+            tipo_token = 'ENTERO'
+    
+    # Operadores y otros símbolos
+    else:
+        if cadena[indice] in '+-':
+            tipo_token = 'OPSUMA'
+        elif cadena[indice] in '*/':
+            tipo_token = 'OPMUL'
+        elif cadena[indice] in '()':
+            tipo_token = 'PARENTESIS'
+        elif cadena[indice] in '{}':
+            tipo_token = 'LLAVE'
+        elif cadena[indice] == ';':
+            tipo_token = 'PUNTOYCOMA'
+        elif cadena[indice] in '!&|<>=':
+            operadores_dobles = {'&&', '||', '==', '!=', '<=', '>='}
+            token = cadena[indice]
+            indice += 1
+            if indice < longitud and cadena[indice] in '&|=<>' and token+cadena[indice] in operadores_dobles:
+                token += cadena[indice]
+                indice += 1
+            tipo_token = 'OPRELAC' if token in operadores_dobles else 'OPNOT' if token == '!' else 'OPAND' if token == '&&' else 'OPOR'
+        else:
+            raise ValueError(f"Caracter inesperado: {cadena[indice]}")
+        token += cadena[indice]  # Agregar el operador al token.
+        indice += 1  # Avanzar el índice después de recoger un operador.
+
+    return TOKEN_MAP[tipo_token], token, indice
 
 def analizar_lexico(cadena):
     tokens = []
-    i = 0
-
-    while i < len(cadena):
-        # Ignorar espacios en blanco
-        while i < len(cadena) and cadena[i].isspace():
-            i += 1
-        
-        # Si llegamos al final de la cadena
-        if i >= len(cadena):
-            break
-
-        # Comenzar un nuevo token
-        token = cadena[i]
-        i += 1
-
-        # Identificar el tipo de token
-        if es_letra(token):
-            while i < len(cadena) and (es_letra(cadena[i]) or es_digito(cadena[i])):
-                token += cadena[i]
-                i += 1
-            if token in PALABRAS_RESERVADAS:
-                tokens.append(('RESERVADA', token))
-            else:
-                tokens.append(('IDENTIFICADOR', token))
-        elif es_digito(token):
-            is_real = False
-            while i < len(cadena) and (es_digito(cadena[i]) or cadena[i] == '.'):
-                if cadena[i] == '.':
-                    if is_real:  # No se permiten dos puntos en un número real
-                        break
-                    is_real = True
-                token += cadena[i]
-                i += 1
-            if is_real:
-                tokens.append(('REAL', token))
-            else:
-                tokens.append(('ENTERO', token))
-        else:
-            # Para operadores y puntuación, asumiremos que son de un solo caracter
-            if token in {'+', '-', '*', '/', '=', '<', '>', '!', '&', '|', '(', ')', '{', '}', ';'}:
-                # Para operadores de dos caracteres, verificamos el siguiente caracter
-                if i < len(cadena) and cadena[i] in {'=', '&', '|'}:
-                    token += cadena[i]
-                    i += 1
-                tokens.append(('OPERADOR', token))
-            else:
-                raise ValueError(f"Caracter inesperado: {token}")
-
+    indice = 0
+    longitud = len(cadena)
+    while indice < longitud:
+        if cadena[indice].isspace():  # Ignorar espacios en blanco
+            indice += 1
+            continue
+        token_numero, token, indice = obtener_token(cadena, indice)
+        tokens.append((token_numero, token))
     return tokens
 
-# Palabras reservadas
-PALABRAS_RESERVADAS = {'if', 'while', 'return', 'else', 'int', 'float'}
-
 # Prueba del analizador léxico
-cadena = input("Ingrese una cadena: ")
-tokens = analizar_lexico(cadena)
-for tipo, valor in tokens:
-    print(f"{tipo}: {valor}")
+cadena_prueba = "if(a>=10){return a+1;}"
+tokens = analizar_lexico(cadena_prueba)
+for token_numero, token in tokens:
+    print(f"Token Tipo {token_numero}, Valor '{token}'")
+
+# Ejemplo de cadena que debería fallar
+cadena_error = "int 3var = 5;"
+try:
+    tokens_error = analizar_lexico(cadena_error)
+except ValueError as e:
+    print(e)
