@@ -1,47 +1,49 @@
 class SyntacticAnalyzer:
-    def __init__(self, action_table, goto_table, grammar_rules):
-        self.action = action_table
-        self.goto = goto_table
-        self.grammar = grammar_rules
+    def __init__(self, action, goto, grammar):
+        #Definimos la matriz de transición de la gramática 
+        self.action = action
+        self.goto = goto
+        self.grammar = grammar
 
 
     def parse(self, tokens):
-        stack = [0]  # Stack initialization with starting state
-        cursor = 0   # Points to the current symbol in the input
+        stack = [0] #Definimos la pila con un simbolo inicial
+        cursor = 0 #Cursor para iterar la cadena
 
         while True:
-            state = stack[-1]  # Current state
-            symbol = tokens[cursor] if cursor < len(tokens) else '$'  # Current symbol
+            print(stack)
+            state = stack[-1]  # Estado Actual
+            symbol = tokens[cursor] if cursor < len(tokens) else '$'  # Simbolo Actual (si la cadena no ha sido analizada copletamente se agrega un simbolo terminal)
 
             if (state, symbol) in self.action:
                 action, value = self.action[(state, symbol)]
 
-                if action == 's':  # Shift action
-                    stack.append(symbol)  # Shift symbol
-                    stack.append(value)   # Shift state
-                    cursor += 1  # Move to next symbol
+                if action == 's':  # Cambio de estado
+                    stack.append(symbol)  # Apilamos el simbolo
+                    stack.append(value)   # Apilamos el estado actual
+                    cursor += 1  # Nos movemos al siguiente simbolo
 
-                elif action == 'r':  # Reduce action
-                    # Apply the grammar rule
+                elif action == 'r':  # Acción de reducción
+                    # Aplicamos la regla de la gramática
                     rule_length = self.grammar[value][1]
-                    # Pop the rule length times 2 from the stack to remove states and symbols
+                    # Desapilamos el doble de reducciones ya que cada símbolo también apiló un estado
                     for _ in range(rule_length * 2):
                         stack.pop()
 
                     non_terminal = self.grammar[value][0]
-                    # Push non_terminal and goto state
+                    # Apilamos un simbolo no terminal y nos movemos a otro estado
                     stack.append(non_terminal)
                     stack.append(self.goto[(stack[-2], non_terminal)])
 
-                elif action == 'acc':  # Accept action
+                elif action == 'acc':  # Aceptamos la cadena según la gramática
                     print("The input string is accepted by the grammar.")
                     return True
 
-            else:
+            else: #Rechazamos la cadena
                 print("The input string is not accepted by the grammar.")
                 return False
 
-# Function to tokenize the input string
+# Función para obtener los tokens
 def tokenize(input_string):
     tokens = []
     current_token = ''
@@ -56,10 +58,10 @@ def tokenize(input_string):
                 tokens.append(char)
     if current_token:
         tokens.append('id')
-    tokens.append('$')  # End of input
+    tokens.append('$')  # Final de la cadena
     return tokens
 
-# Define the parsing table, states, and actions
+# Definimos la gramática del ejemplo 1
 action_table1 = {
     (0, 'id'): ('s', 2),
     (1, '$'): ('acc', ''),
@@ -70,12 +72,11 @@ action_table1 = {
 goto_table1 = {
             (0, 'E'): 1
 }
-
-# The grammar rules for reduction
 grammar_rules1 = {
     'E -> id + id': ('E', 3)  # E -> id + id reduces 3 items from stack
 }
 
+# Definimos la gramática del ejemplo 2
 action_table2 = {
     (0, 'id'): ('s', 2),
     (1, '$'): ('acc', ''),
@@ -84,12 +85,10 @@ action_table2 = {
     (3, 'id'): ('s', 2),
     (4, '$'): ('r', 'E -> id + E')  # Correct action for state 4
 }
-
 goto_table2 = {
     (0, 'E'): 1,
     (3, 'E'): 4
 }
-
 grammar_rules2 = {
     'E -> id': ('E', 1),       # E -> id reduces 1 item from stack
     'E -> id + E': ('E', 3)    # E -> id + E reduces 3 items from stack
@@ -104,5 +103,3 @@ result = analyzer.parse(tokens)
 analyzer = SyntacticAnalyzer(action_table2, goto_table2, grammar_rules2)
 tokens = tokenize('a+b+c+d+e+f')
 result = analyzer.parse(tokens)
-
-#Revisar el algoritmo de parsing para el ejemplo 1 y 2 a ver sis on similares 
