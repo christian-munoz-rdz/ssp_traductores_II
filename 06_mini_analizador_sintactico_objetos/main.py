@@ -55,6 +55,7 @@ class SyntacticAnalyzerOO:
         cursor = 0
 
         while True:
+            #print(self.stack, tokens[cursor:])
             top_state = self.stack.top()
             symbol = tokens[cursor] if cursor < len(tokens) else Terminal('$')
             action_entry = (top_state.state, symbol.symbol)
@@ -142,8 +143,8 @@ grammar_rules_grammar_2 = {
 analyzer_grammar_1 = SyntacticAnalyzerOO(action_table_grammar_1, goto_table_grammar_1, grammar_rules_grammar_1)
 analyzer_grammar_2 = SyntacticAnalyzerOO(action_table_grammar_2, goto_table_grammar_2, grammar_rules_grammar_2)
 
-tokens_1 = tokenize('hola+mundo')
-tokens_2 = tokenize('a+b+c+d+e+f')
+tokens_1 = tokenize('hola+mundo+cruel')
+tokens_2 = tokenize('a+b+c+d+e++')
 
 analyzer_grammar_1.parse(tokens_1)
 analyzer_grammar_2.parse(tokens_2)
