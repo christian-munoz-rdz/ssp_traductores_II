@@ -73,7 +73,7 @@ goto_table1 = {
             (0, 'E'): 1
 }
 grammar_rules1 = {
-    'E -> id + id': ('E', 3)  # E -> id + id reduces 3 items from stack
+    'E -> id + id': ('E', 3)  # E -> id + id reduce 3 elementos de la pila
 }
 
 # Definimos la gramática del ejemplo 2
@@ -83,23 +83,23 @@ action_table2 = {
     (2, '+'): ('s', 3),
     (2, '$'): ('r', 'E -> id'),
     (3, 'id'): ('s', 2),
-    (4, '$'): ('r', 'E -> id + E')  # Correct action for state 4
+    (4, '$'): ('r', 'E -> id + E')
 }
 goto_table2 = {
     (0, 'E'): 1,
     (3, 'E'): 4
 }
 grammar_rules2 = {
-    'E -> id': ('E', 1),       # E -> id reduces 1 item from stack
-    'E -> id + E': ('E', 3)    # E -> id + E reduces 3 items from stack
+    'E -> id': ('E', 1),       # E -> id reduce 1 elemento de la pila
+    'E -> id + E': ('E', 3)    # E -> id + E reduce 3 elementos de la pila
 }
 
 # Analizamos la primera gramática
 analyzer = SyntacticAnalyzer(action_table1, goto_table1, grammar_rules1)
-tokens = tokenize('hola+mundo')
+tokens = tokenize('hola+mundo+cruel')
 result = analyzer.parse(tokens)
 
 # Analizamos la segunda gramática
 analyzer = SyntacticAnalyzer(action_table2, goto_table2, grammar_rules2)
-tokens = tokenize('a+b+c+d+e+f')
+tokens = tokenize('a+b+c+d+e+')
 result = analyzer.parse(tokens)
