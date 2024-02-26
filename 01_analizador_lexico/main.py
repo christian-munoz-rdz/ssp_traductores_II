@@ -49,15 +49,15 @@ def es_espacio(c):
 
 def obtener_tokens(codigo):
     tokens = {
-        ";": ("Punto y coma", ";", 12), ",": ("Coma", ",", 13), "(": ("ParéntesisI", "(", 14), ")": ("ParéntesisD", ")", 15),
-        "{": ("LlaveI", "{", 16), "}": ("LlaveD", "}", 17), "=": ("Asignación", "=", 18),
-        "if": ("Palabra Reservada", "if", 19), "while": ("Palabra Reservada", "while", 20),
-        "return": ("Palabra Reservada", "return", 21), "else": ("Palabra Reservada", "else", 22),
-        "+": ("Operador Suma", "+", 5), "-": ("Operador Suma", "-", 5),
-        "||": ("Operador Or", "||", 8), "&&": ("Operador And", "&&", 9), "!": ("Operador Not", "!", 10),
-        "*": ("Operador Multiplicacion", "*", 6), "/": ("Operador Multiplicacion", "/", 6),
-        "==": ("Operador Igualdad", "==", 11), "!=": ("Operador Igualdad", "!=", 11), "<": ("Operador Relacional", "<", 7),
-        "<=": ("Operador Relacional", "<=", 7), ">": ("Operador Relacional", ">", 7), ">=": ("Operador Relacional", ">=", 7),
+        ";": (";", ";", 12), ",": (",", ",", 13), "(": ("(", "(", 14), ")": (")", ")", 15),
+        "{": ("{", "{", 16), "}": ("}", "}", 17), "=": ("=", "=", 18),
+        "if": ("if", "if", 19), "while": ("while", "while", 20),
+        "return": ("return", "return", 21), "else": ("else", "else", 22),
+        "+": ("opSuma", "+", 5), "-": ("opSuma", "-", 5),
+        "||": ("opOr", "||", 8), "&&": ("opAnd", "&&", 9), "!": ("opNot", "!", 10),
+        "*": ("opMul", "*", 6), "/": ("opMul", "/", 6),
+        "==": ("Operador Igualdad", "==", 11), "!=": ("opIgualdad", "!=", 11), "<": ("opRelac", "<", 7),
+        "<=": ("opRelac", "<=", 7), ">": ("opRelac", ">", 7), ">=": ("opRelac", ">=", 7),
         "$": ("Fin de Archivo", "$", 23)
     }
     tipos_de_dato = ["int", "float", "void"]
@@ -81,7 +81,7 @@ def obtener_tokens(codigo):
                 i += 1
             if i < longitud and codigo[i] == '"':  # Cerrar cadena correctamente
                 temp = codigo[inicio_cadena:i+1]
-                tokens_identificados.append(("Cadena", temp, 3))
+                tokens_identificados.append(("cadena", temp, 3))
                 i += 1
             else:
                 # Error: cadena no cerrada
@@ -97,11 +97,11 @@ def obtener_tokens(codigo):
             if not es_identificador(temp):  # Si el identificador no es válido
                 tokens_identificados.append(("Error: Identificador no válido", codigo[inicio_token:i], -1))
             elif temp in tipos_de_dato:
-                tokens_identificados.append(("Tipo de Dato", temp, 4))
+                tokens_identificados.append(("tipo", temp, 4))
             elif temp in tokens:
                 tokens_identificados.append(tokens[temp])
             else:
-                tokens_identificados.append(("Identificador", temp, 0))
+                tokens_identificados.append(("identificador", temp, 0))
         
         elif es_digito(codigo[i]):  # Inicio de constante numérica
             inicio_numero = i
@@ -112,9 +112,9 @@ def obtener_tokens(codigo):
             if not es_entero(temp) and not es_real(temp):  # Si el número no es válido
                 tokens_identificados.append(("Error: Número no válido", codigo[inicio_numero:i], -1))
             elif es_entero(temp):
-                tokens_identificados.append(("Entero", temp, 1))
+                tokens_identificados.append(("entero", temp, 1))
             elif es_real(temp):
-                tokens_identificados.append(("Real", temp, 2))
+                tokens_identificados.append(("real", temp, 2))
         
         else:  # Otros caracteres (operadores, delimitadores) o errores
             temp += codigo[i]
