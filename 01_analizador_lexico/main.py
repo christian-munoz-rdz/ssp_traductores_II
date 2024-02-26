@@ -49,19 +49,19 @@ def es_espacio(c):
 
 def obtener_tokens(codigo):
     tokens = {
-        ";": ("Punto y coma", ";", 12), ",": ("Coma", ",", 13), "(": ("ParéntesisI", "(", 14), ")": ("ParéntesisD", ")", 15), 
+        ";": ("Punto y coma", ";", 12), ",": ("Coma", ",", 13), "(": ("ParéntesisI", "(", 14), ")": ("ParéntesisD", ")", 15),
         "{": ("LlaveI", "{", 16), "}": ("LlaveD", "}", 17), "=": ("Asignación", "=", 18),
-        "if": ("Palabra Reservada", "if", 19), "while": ("Palabra Reservada", "while", 20), 
-        "return": ("Palabra Reservada", "return", 21), "else": ("Palabra Reservada", "else", 22), 
+        "if": ("Palabra Reservada", "if", 19), "while": ("Palabra Reservada", "while", 20),
+        "return": ("Palabra Reservada", "return", 21), "else": ("Palabra Reservada", "else", 22),
         "+": ("Operador Suma", "+", 5), "-": ("Operador Suma", "-", 5),
         "||": ("Operador Or", "||", 8), "&&": ("Operador And", "&&", 9), "!": ("Operador Not", "!", 10),
-        "*": ("Operador Multiplicacion", "*", 6), "/": ("Operador Multiplicacion", "/", 6), 
-        "==": ("Operador Igualdad", "==", 11), "!=": ("Operador Igualdad", "!=", 11), "<": ("Operador Relacional", "<", 7), 
-        "<=": ("Operador Relacional", "<=", 7), ">": ("Operador Relacional", ">", 7), ">=": ("Operador Relacional", ">=", 7),  
+        "*": ("Operador Multiplicacion", "*", 6), "/": ("Operador Multiplicacion", "/", 6),
+        "==": ("Operador Igualdad", "==", 11), "!=": ("Operador Igualdad", "!=", 11), "<": ("Operador Relacional", "<", 7),
+        "<=": ("Operador Relacional", "<=", 7), ">": ("Operador Relacional", ">", 7), ">=": ("Operador Relacional", ">=", 7),
         "$": ("Fin de Archivo", "$", 23)
     }
     tipos_de_dato = ["int", "float", "void"]
-    
+
     i = 0
     longitud = len(codigo)
     tokens_identificados = []
@@ -73,28 +73,50 @@ def obtener_tokens(codigo):
         
         temp = ""
         
-        if es_letra(codigo[i]):  # Inicio de identificador o palabra reservada
+        if codigo[i] == '"':  # Inicio de cadena
+            inicio_cadena = i
+            i += 1
+            while i < longitud and codigo[i] != '"':
+                temp += codigo[i]
+                i += 1
+            if i < longitud and codigo[i] == '"':  # Cerrar cadena correctamente
+                temp = codigo[inicio_cadena:i+1]
+                tokens_identificados.append(("Cadena", temp, 3))
+                i += 1
+            else:
+                # Error: cadena no cerrada
+                temp = codigo[inicio_cadena:i+1]
+                tokens_identificados.append(("Error: Cadena no cerrada", temp, -1))
+        
+        elif es_letra(codigo[i]):  # Inicio de identificador o palabra reservada
+            inicio_token = i
             while i < longitud and (es_letra(codigo[i]) or es_digito(codigo[i])):
                 temp += codigo[i]
                 i += 1
             
-            if temp in tipos_de_dato:
+            if not es_identificador(temp):  # Si el identificador no es válido
+                tokens_identificados.append(("Error: Identificador no válido", codigo[inicio_token:i], -1))
+            elif temp in tipos_de_dato:
                 tokens_identificados.append(("Tipo de Dato", temp, 4))
             elif temp in tokens:
                 tokens_identificados.append(tokens[temp])
             else:
                 tokens_identificados.append(("Identificador", temp, 0))
         
-        elif es_digito(codigo[i]) or (codigo[i] == '.' and i + 1 < longitud and es_digito(codigo[i + 1])):  # Inicio de constante numérica
+        elif es_digito(codigo[i]):  # Inicio de constante numérica
+            inicio_numero = i
             while i < longitud and (es_digito(codigo[i]) or codigo[i] == '.'):
                 temp += codigo[i]
                 i += 1
-            if es_entero(temp):
+            
+            if not es_entero(temp) and not es_real(temp):  # Si el número no es válido
+                tokens_identificados.append(("Error: Número no válido", codigo[inicio_numero:i], -1))
+            elif es_entero(temp):
                 tokens_identificados.append(("Entero", temp, 1))
             elif es_real(temp):
                 tokens_identificados.append(("Real", temp, 2))
         
-        else:  # Otros caracteres (operadores, delimitadores)
+        else:  # Otros caracteres (operadores, delimitadores) o errores
             temp += codigo[i]
             if i + 1 < longitud:
                 temp_doble = temp + codigo[i + 1]
@@ -104,6 +126,9 @@ def obtener_tokens(codigo):
                     continue
             if temp in tokens:
                 tokens_identificados.append(tokens[temp])
+            else:
+                # Error: caracter no reconocido
+                tokens_identificados.append(("Error: Caracter no reconocido", temp, -1))
             i += 1
 
     return tokens_identificados
@@ -135,10 +160,6 @@ class TokenizerWindow(QMainWindow):
         self.tableWidget.setColumnCount(3)
         self.tableWidget.setHorizontalHeaderLabels(['Tipo de Token', 'Token', 'Número Asociado'])
         layout.addWidget(self.tableWidget)
-
-        #Añadir text edit vacío a la derecha
-        self.textEdit2 = QTextEdit()
-        layout.addWidget(self.textEdit2)
         
         # Widget contenedor y set layout
         container = QWidget()
