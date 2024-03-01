@@ -631,71 +631,58 @@ grammar_rules = {
 # Objeto ElementoPila y herencias
 
 class ElementoPila:
-    def __init__(self, simbolo=None, valor=None, numero=None):
-        self.simbolo = simbolo
-        self.valor = valor
-        self.numero = numero
+    def __init__(self, tipo=None, valor=None):
+        self.tipo = tipo  # 'Terminal', 'NoTerminal', 'Estado'
+        self.valor = valor  # Valor específico del elemento
 
     def __repr__(self):
-        return f"{self.simbolo} {self.valor} {self.numero}"
+        return f"{self.tipo}: {self.valor}"
+
 
 class Terminal(ElementoPila):
-    def __init__(self, simbolo= None, valor= None, numero= None):
-        super().__init__(simbolo, valor, numero)
+    def __init__(self, valor=None, id_token=None):
+        super().__init__("Terminal", valor)
+        self.id_token = id_token  # Identificador único según la tabla de símbolos
+
 
 class NoTerminal(ElementoPila):
-    def __init__(self, simbolo= None, valor= None, numero= None):
-        super().__init__(simbolo, valor, numero)
+    def __init__(self, valor=None):
+        super().__init__("NoTerminal", valor)
+
 
 class Estado(ElementoPila):
-    def __init__(self, simbolo= None, valor= None, numero= None):
-        super().__init__(simbolo, valor, numero)
+    def __init__(self, numero=None):
+        super().__init__("Estado", numero)
+
 
 def es_letra(c):
     return c.isalpha()
 
+
 def es_digito(c):
     return c.isdigit()
 
+
 def es_identificador(input):
-    if input[0].isalpha():
-        for char in input[1:]:
-            if not (char.isalpha() or char.isdigit()):
-                return False
-        return True
-    return False
+    return input[0].isalpha() and all(char.isalnum() for char in input[1:])
+
 
 def es_entero(input):
-    if input[0].isdigit():
-        for char in input[1:]:
-            if not char.isdigit():
-                return False
-        return True
-    return False
+    return input.isdigit()
+
 
 def es_real(input):
-    if not input[0].isdigit():
-        return False
-    elif input[0].isdigit:
-        pos=1
-        for char in input[1:]:
-            if not (char.isdigit() or char == '.'):
-                return False
-            elif char == '.':
-                if '.' in input[pos+1:]:
-                    return False
-            pos += 1
-        if input[-1] == '.':
-            return False
-        return True
+    partes = input.split('.')
+    return all(part.isdigit() for part in partes) and len(partes) == 2 and partes[0] != '' and partes[1] != ''
+
 
 def es_cadena(input):
-    if input[0] == '"' and input[-1] == '"':
-        return True
-    return False
+    return input.startswith('"') and input.endswith('"') and len(input) > 1
+
 
 def es_espacio(c):
     return c in ' \t\n\r'
+
 
 def obtener_tokens(codigo):
     tokens = {
@@ -706,7 +693,7 @@ def obtener_tokens(codigo):
         "+": ("opSuma", "+", 5), "-": ("opSuma", "-", 5),
         "||": ("opOr", "||", 8), "&&": ("opAnd", "&&", 9), "!": ("opNot", "!", 10),
         "*": ("opMul", "*", 6), "/": ("opMul", "/", 6),
-        "==": ("Operador Igualdad", "==", 11), "!=": ("opIgualdad", "!=", 11), "<": ("opRelac", "<", 7),
+        "==": ("opIgualdad", "==", 11), "!=": ("opIgualdad", "!=", 11), "<": ("opRelac", "<", 7),
         "<=": ("opRelac", "<=", 7), ">": ("opRelac", ">", 7), ">=": ("opRelac", ">=", 7),
         "$": ("Fin de Archivo", "$", 23)
     }
@@ -720,80 +707,48 @@ def obtener_tokens(codigo):
         if es_espacio(codigo[i]):
             i += 1
             continue
-        
+
         temp = ""
-        
-        if codigo[i] == '"':  # Inicio de cadena
-            inicio_cadena = i
+        if es_letra(codigo[i]):
+            while i < longitud and (es_letra(codigo[i]) or es_digito(codigo[i])):
+                temp += codigo[i]
+                i += 1
+            if temp in tokens:
+                tokens_identificados.append(Terminal(temp, tokens[temp][2]))
+            elif temp in tipos_de_dato:
+                tokens_identificados.append(Terminal(temp, 4))
+            else:
+                tokens_identificados.append(Terminal("identificador", temp, 0))
+        elif es_digito(codigo[i]) or (codigo[i] == '.' and i + 1 < longitud and es_digito(codigo[i + 1])):
+            while i < longitud and (es_digito(codigo[i]) or codigo[i] == '.'):
+                temp += codigo[i]
+                i += 1
+            if '.' in temp:
+                tokens_identificados.append(Terminal("real", temp, 2))
+            else:
+                tokens_identificados.append(Terminal("entero", temp, 1))
+        elif codigo[i] == '"':
             i += 1
             while i < longitud and codigo[i] != '"':
                 temp += codigo[i]
                 i += 1
-            if i < longitud and codigo[i] == '"':  # Cerrar cadena correctamente
-                temp = codigo[inicio_cadena:i+1]
-                token = Terminal("cadena", temp, 3)
-                tokens_identificados.append(token)
+            if i < longitud:
+                tokens_identificados.append(Terminal("cadena", '"' + temp + '"', 3))
                 i += 1
-            else:
-                # Error: cadena no cerrada
-                temp = codigo[inicio_cadena:i+1]
-                token = Terminal("Error", temp, -1)
-                tokens_identificados.append(token)
-        
-        elif es_letra(codigo[i]):  # Inicio de identificador o palabra reservada
-            inicio_token = i
-            while i < longitud and (es_letra(codigo[i]) or es_digito(codigo[i])):
-                temp += codigo[i]
-                i += 1
-            
-            if not es_identificador(temp):  # Si el identificador no es válido
-                token = Terminal("Error", temp, -1)
-                tokens_identificados.append(token)
-            elif temp in tipos_de_dato:
-                token = Terminal("tipo", temp, 4)
-                tokens_identificados.append(token)
-            elif temp in tokens:
-                token = Terminal( tokens[temp][0], temp, tokens[temp][2])
-                tokens_identificados.append(token)
-            else:
-                token = Terminal("identificador", temp, 0)
-                tokens_identificados.append(token)
-        
-        elif es_digito(codigo[i]):  # Inicio de constante numérica
-            inicio_numero = i
-            while i < longitud and (es_digito(codigo[i]) or codigo[i] == '.'):
-                temp += codigo[i]
-                i += 1
-            
-            if not es_entero(temp) and not es_real(temp):  # Si el número no es válido
-                token = Terminal("Error", temp, -1)
-                tokens_identificados.append(token)
-            elif es_entero(temp):
-                token = Terminal("entero", temp, 1)
-                tokens_identificados.append(token)
-            elif es_real(temp):
-                token = Terminal("real", temp, 2)
-                tokens_identificados.append(token)
-        
-        else:  # Otros caracteres (operadores, delimitadores) o errores
-            temp += codigo[i]
-            if i + 1 < longitud:
-                temp_doble = temp + codigo[i + 1]
-                if temp_doble in tokens:  # Verificar operadores de dos caracteres
-                    token = Terminal(tokens[temp_doble][0], temp_doble, tokens[temp_doble][2])
-                    tokens_identificados.append(temp)
-                    i += 2
-                    continue
+        else:
+            temp = codigo[i]
             if temp in tokens:
-                token = Terminal(tokens[temp][0], temp, tokens[temp][2])
-                tokens_identificados.append(token)
+                tokens_identificados.append(Terminal(tokens[temp][0], temp, tokens[temp][2]))
+                i += 1
             else:
-                # Error: caracter no reconocido
-                token = Terminal("Error", temp, -1)
-                tokens_identificados.append(token)
-            i += 1
+                # Manejo de errores o símbolos no reconocidos
+                tokens_identificados.append(Terminal("Error", temp, -1))
+                i += 1
 
+    # Añadir token de fin de archivo al final
+    tokens_identificados.append(Terminal("Fin de Archivo", "$", 23))
     return tokens_identificados
+
 
 class Pila:
     def __init__(self):
@@ -822,41 +777,43 @@ class SyntacticAnalyzer:
         self.goto = goto_table
         self.grammar = grammar_rules
         self.stack = Pila()
-        self.stack.push(Estado(numero=0))  # Asumimos Estado(0) como estado inicial
+        self.stack.push(Estado(numero=0))  # Estado inicial
 
     def parse(self, tokens):
+        tokens.append(Terminal("$", "$", 23))  # Añadir token de fin de archivo
         cursor = 0
 
         while True:
             top_state = self.stack.top()
             symbol = tokens[cursor] if cursor < len(tokens) else Terminal('$', '$', 23)
-            print(f"Estado actual: {top_state}, Símbolo actual: {symbol}")
             action_entry = (top_state.numero, symbol.simbolo)
 
             if action_entry in self.action:
                 action, value = self.action[action_entry]
 
-                if action == 's':  # Acción de desplazamiento
+                if action == 's':  # Desplazamiento
                     self.stack.push(symbol)
                     self.stack.push(Estado(numero=value))
                     cursor += 1
 
-                elif action == 'r':  # Acción de reducción
-                    for _ in range(self.grammar[value][1] * 2):
+                elif action == 'r':  # Reducción
+                    rule_name, rule_size = self.grammar[value]
+                    for _ in range(2 * rule_size):  # Retirar elementos de la pila según la regla
                         self.stack.pop()
-                    non_terminal = NoTerminal(simbolo=self.grammar[value][0])
+                    non_terminal = NoTerminal(simbolo=rule_name)
                     self.stack.push(non_terminal)
-                    goto_state = self.stack.items[-2].numero
-                    goto_entry = (goto_state, non_terminal.simbolo)
-                    self.stack.push(Estado(numero=self.goto[goto_entry]))
 
-                    # Verificar si la pila está efectivamente vacía tras la reducción, lo cual indicaría aceptación
-                    if len(self.stack.items) == 1:
+                    top_state = self.stack.items[-2] if len(self.stack.items) > 1 else self.stack.top()
+                    goto_entry = (top_state.numero, non_terminal.simbolo)
+                    if goto_entry in self.goto:
+                        self.stack.push(Estado(numero=self.goto[goto_entry]))
+
+                    if rule_name == 'programa' and self.stack.top().numero == 0 and symbol.simbolo == '$':
                         print("La cadena de entrada es aceptada por la gramática.")
                         return True
 
             else:
-                print("La cadena de entrada no es aceptada por la gramática.")
+                print("Error sintáctico en la entrada.")
                 return False
 
 
@@ -875,7 +832,6 @@ def main():
         return a;
     }
     """
-
     tokens = obtener_tokens(codigo)
     print(tokens)
 
