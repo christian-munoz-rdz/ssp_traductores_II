@@ -38,7 +38,7 @@
     "Python.test.executor": "Run",
     "RunOnceActivity.OpenProjectViewOnStart": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "main",
+    "git-widget-placeholder": "analizador__sintactico",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -119,6 +119,7 @@
       <workItem from="1706497704617" duration="16182000" />
       <workItem from="1706514132480" duration="4480000" />
       <workItem from="1709533538651" duration="5942000" />
+      <workItem from="1709703860788" duration="32000" />
     </task>
     <servers />
   </component>
