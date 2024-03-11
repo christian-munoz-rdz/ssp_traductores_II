@@ -1,19 +1,14 @@
+from PyQt5.QtWidgets import QApplication, QMainWindow, QTextEdit, QTableWidget, QTableWidgetItem, QVBoxLayout, QHBoxLayout, QPushButton, QWidget
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QTextEdit, QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget, QHBoxLayout
 
-def es_letra(c):
-    return c.isalpha()
+class Token:
+    def __init__(self, type, value, _id=None):
+        self.type = type
+        self.value = value
+        self._id = _id
 
-def es_digito(c):
-    return c.isdigit()
-
-def es_identificador(input):
-    if input[0].isalpha():
-        for char in input[1:]:
-            if not (char.isalpha() or char.isdigit()):
-                return False
-        return True
-    return False
+    def return_token(self):
+        return (self.type, self.value, self._id)
 
 def es_entero(input):
     if input[0].isdigit():
@@ -44,144 +39,186 @@ def es_cadena(input):
         return True
     return False
 
-def es_espacio(c):
-    return c in ' \t\n\r'
+class Tokenizer():
+    def __init__(self, input):
+        self.input = input
+        self.tokens_tuples = []
+        self.tokens_objects = []
+        self.reserved_words = ['int', 'float', 'void' 'if', 'while', 'return', 'else']
+        self.operators = ['+', '-', '*', '/', '=', '<', '>', '<=', '>=', '!=', '==', '&&', '||', '!', '&', '|']
+        self.delimiters = [' ', '\n', '(', ')', '{', '}', ';', ',']
+        self.simbolos_permitidos = self.operators + self.delimiters + ['.', '$', '"', "'"]
 
-def obtener_tokens(codigo):
-    tokens = {
-        ";": (";", ";", 12), ",": (",", ",", 13), "(": ("(", "(", 14), ")": (")", ")", 15),
-        "{": ("{", "{", 16), "}": ("}", "}", 17), "=": ("=", "=", 18),
-        "if": ("if", "if", 19), "while": ("while", "while", 20),
-        "return": ("return", "return", 21), "else": ("else", "else", 22),
-        "+": ("opSuma", "+", 5), "-": ("opSuma", "-", 5),
-        "||": ("opOr", "||", 8), "&&": ("opAnd", "&&", 9), "!": ("opNot", "!", 10),
-        "*": ("opMul", "*", 6), "/": ("opMul", "/", 6),
-        "==": ("Operador Igualdad", "==", 11), "!=": ("opIgualdad", "!=", 11), "<": ("opRelac", "<", 7),
-        "<=": ("opRelac", "<=", 7), ">": ("opRelac", ">", 7), ">=": ("opRelac", ">=", 7),
-        "$": ("Fin de Archivo", "$", 23)
-    }
-    tipos_de_dato = ["int", "float", "void"]
+    def add_token(self, token_type, token_value, token_id=None):
+        self.tokens_objects.append(Token(token_type, token_value, token_id))
 
-    i = 0
-    longitud = len(codigo)
-    tokens_identificados = []
+    def obtener_tokens(self):
+        pos = 0
 
-    while i < longitud:
-        if es_espacio(codigo[i]):
-            i += 1
-            continue
-        
-        temp = ""
-        
-        if codigo[i] == '"':  # Inicio de cadena
-            inicio_cadena = i
-            i += 1
-            while i < longitud and codigo[i] != '"':
-                temp += codigo[i]
-                i += 1
-            if i < longitud and codigo[i] == '"':  # Cerrar cadena correctamente
-                temp = codigo[inicio_cadena:i+1]
-                tokens_identificados.append(("cadena", temp, 3))
-                i += 1
+        current_token = ""
+
+        while pos < len(self.input):
+
+            char = self.input[pos]
+
+            if char in self.delimiters:
+
+                if current_token:
+                    # Aquí es donde determinaríamos si es un tipo de dato, un identificador o un número
+                    if current_token in self.reserved_words:
+                        self.tokens_tuples.append(('RESERVED_WORD', current_token))
+                    elif es_entero(current_token):
+                        self.tokens_tuples.append(('INTEGER', current_token))
+                    elif es_real(current_token):
+                        self.tokens_tuples.append(('FLOAT', current_token))
+                    else:
+                        self.tokens_tuples.append(('IDENTIFIER', current_token))
+                    current_token = ""
+
+                if char.strip():
+                    self.tokens_tuples.append(('DELIMITER', char))
+            elif char in self.operators:
+
+                if current_token:
+                    if es_entero(current_token):
+                        self.tokens_tuples.append(('INTEGER', current_token))
+                    elif es_real(current_token):
+                        self.tokens_tuples.append(('FLOAT', current_token))
+                    else:
+                        self.tokens_tuples.append(('IDENTIFIER', current_token))
+                    current_token = ""
+
+                if char + self.input[pos + 1] in self.operators:
+                    self.tokens_tuples.append(('OPERATOR', char + self.input[pos + 1]))
+                    pos += 1
+                else:
+                    self.tokens_tuples.append(('OPERATOR', char))
             else:
-                # Error: cadena no cerrada
-                temp = codigo[inicio_cadena:i+1]
-                tokens_identificados.append(("Error: Cadena no cerrada", temp, -1))
-        
-        elif es_letra(codigo[i]):  # Inicio de identificador o palabra reservada
-            inicio_token = i
-            while i < longitud and (es_letra(codigo[i]) or es_digito(codigo[i])):
-                temp += codigo[i]
-                i += 1
-            
-            if not es_identificador(temp):  # Si el identificador no es válido
-                tokens_identificados.append(("Error: Identificador no válido", codigo[inicio_token:i], -1))
-            elif temp in tipos_de_dato:
-                tokens_identificados.append(("tipo", temp, 4))
-            elif temp in tokens:
-                tokens_identificados.append(tokens[temp])
-            else:
-                tokens_identificados.append(("identificador", temp, 0))
-        
-        elif es_digito(codigo[i]):  # Inicio de constante numérica
-            inicio_numero = i
-            while i < longitud and (es_digito(codigo[i]) or codigo[i] == '.'):
-                temp += codigo[i]
-                i += 1
-            
-            if not es_entero(temp) and not es_real(temp):  # Si el número no es válido
-                tokens_identificados.append(("Error: Número no válido", codigo[inicio_numero:i], -1))
-            elif es_entero(temp):
-                tokens_identificados.append(("entero", temp, 1))
-            elif es_real(temp):
-                tokens_identificados.append(("real", temp, 2))
-        
-        else:  # Otros caracteres (operadores, delimitadores) o errores
-            temp += codigo[i]
-            if i + 1 < longitud:
-                temp_doble = temp + codigo[i + 1]
-                if temp_doble in tokens:  # Verificar operadores de dos caracteres
-                    tokens_identificados.append(tokens[temp_doble])
-                    i += 2
-                    continue
-            if temp in tokens:
-                tokens_identificados.append(tokens[temp])
-            else:
-                # Error: caracter no reconocido
-                tokens_identificados.append(("Error: Caracter no reconocido", temp, -1))
-            i += 1
+                current_token += char
+            pos += 1
 
-    return tokens_identificados
+        # Mostrar los tokens encontrados
+        for token in self.tokens_tuples:
+            if (not token[1][0].isalnum()) and (token[1][0] not in self.simbolos_permitidos):
+                self.add_token('ERROR', token[1], -1)
+            if token[0] == 'RESERVED_WORD':
+                if token[1] in ['int', 'float', 'void']:
+                    self.add_token('DATA_TYPE', token[1], 4)
+                elif token[1] == 'if':
+                    self.add_token('IF', token[1], 19)
+                elif token[1] == 'while':
+                    self.add_token('WHILE', token[1], 20)
+                elif token[1] == 'return':
+                    self.add_token('RETURN', token[1], 21)
+                elif token[1] == 'else':
+                    self.add_token('ELSE', token[1], 22)
+            elif token[0] == 'OPERATOR':
+                if token[1] in ['+', '-']:
+                    self.add_token('OP_SUMA', token[1], 5)
+                elif token[1] in ['*', '/']:
+                    self.add_token('OP_MUL', token[1], 6)
+                elif token[1] in ['<', '>', '<=', '>=']:
+                    self.add_token('OP_RELAC', token[1], 7)
+                elif token[1] == '||':
+                    self.add_token('OP_OR', token[1], 8)
+                elif token[1] == '&&':
+                    self.add_token('OP_AND', token[1], 9)
+                elif token[1] == '!':
+                    self.add_token('OP_NOT', token[1], 10)
+                elif token[1] in ['!=', '==']:
+                    self.add_token('OP_IGUALDAD', token[1], 11)
+                elif token[1] == '=':
+                    self.add_token('IGUAL', token[1], 18)
+            elif token[0] == 'DELIMITER':
+                if token[1] == ';':
+                    self.add_token('PUNTO_COMA', token[1], 12)
+                elif token[1] == ',':
+                    self.add_token('COMA', token[1], 13)
+                elif token[1] == '(':
+                    self.add_token('PARENTESIS_A', token[1], 14)
+                elif token[1] == ')':
+                    self.add_token('PARENTESIS_C', token[1], 15)
+                elif token[1] == '{':
+                    self.add_token('LLAVE_A', token[1], 16)
+                elif token[1] == '}':
+                    self.add_token('LLAVE_C', token[1], 17)
+            elif token[0] == 'IDENTIFIER':
+                if es_cadena(token[1]):
+                    self.add_token('STRING', token[1], 3)
+                elif token[1] == '$':
+                    self.add_token('FIN', token[1], 23)
+                else:
+                    self.add_token('IDENTIFIER', token[1], 0)
+            elif token[0] == 'INTEGER':
+                self.add_token('INTEGER', token[1], 1)
+            elif token[0] == 'FLOAT':
+                self.add_token('FLOAT', token[1], 2)
+    
+    def return_tokens(self):
+        return [token.return_token() for token in self.tokens_objects]
 
-# Clase principal de la ventana de la aplicación
-class TokenizerWindow(QMainWindow):
+#Definimos la interfaz grafica   
+class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.initUI()
-        
-    def initUI(self):
-        self.setWindowTitle('Analizador de Tokens')
-        self.setGeometry(100, 100, 1200, 600)
-        
-        # Layout principal
-        layout = QHBoxLayout()
-        
-        # Área de texto para entrada de código
-        self.textEdit = QTextEdit()
-        layout.addWidget(self.textEdit)
-        
-        # Botón para analizar el texto
-        self.btnAnalyze = QPushButton('Analizar')
-        self.btnAnalyze.clicked.connect(self.analyzeText)
-        layout.addWidget(self.btnAnalyze)
-        
-        # Tabla para mostrar los tokens
-        self.tableWidget = QTableWidget()
-        self.tableWidget.setColumnCount(3)
-        self.tableWidget.setHorizontalHeaderLabels(['Tipo de Token', 'Token', 'Número Asociado'])
-        layout.addWidget(self.tableWidget)
-        
-        # Widget contenedor y set layout
-        container = QWidget()
-        container.setLayout(layout)
-        self.setCentralWidget(container)
-        
-    def analyzeText(self):
-        codigo = self.textEdit.toPlainText()
-        tokens = obtener_tokens(codigo)
-        self.tableWidget.setRowCount(len(tokens))
-        
-        for i, token in enumerate(tokens):
-            self.tableWidget.setItem(i, 0, QTableWidgetItem(token[0]))
-            self.tableWidget.setItem(i, 1, QTableWidgetItem(token[1]))
-            self.tableWidget.setItem(i, 2, QTableWidgetItem(str(token[2])))
-        
-# Punto de entrada de la aplicación
-def main():
-    app = QApplication(sys.argv)
-    ex = TokenizerWindow()
-    ex.show()
-    sys.exit(app.exec_())
 
+    def initUI(self):
+        self.setWindowTitle("Analizador Léxico")
+        self.setGeometry(100, 100, 800, 600)
+
+        # Layouts
+        layout = QHBoxLayout()
+        leftLayout = QVBoxLayout()
+        rightLayout = QVBoxLayout()
+
+        # Componentes
+        self.textEdit = QTextEdit()
+        self.analyzeButton = QPushButton("Analizar")
+        self.analyzeButton.clicked.connect(self.analyzeText) # Conectar el evento click del botón con el método analyzeText
+
+        self.tokensTable = QTableWidget()
+        self.tokensTable.setColumnCount(3)
+        self.tokensTable.setHorizontalHeaderLabels([" ", "Valor", "Tipo"])
+
+        # Añadir componentes a los layouts
+        leftLayout.addWidget(self.textEdit)
+        leftLayout.addWidget(self.analyzeButton)
+
+        rightLayout.addWidget(self.tokensTable)
+
+        layout.addLayout(leftLayout)
+        layout.addLayout(rightLayout)
+
+        # Contenedor central
+        centralWidget = QWidget()
+        centralWidget.setLayout(layout)
+        self.setCentralWidget(centralWidget)
+
+    def analyzeText(self):
+        """
+        Analiza el texto ingresado en el widget de texto y muestra los tokens en una tabla.
+        """
+        text = self.textEdit.toPlainText() # Obtenemos el texto del widget de texto
+        analizador = Tokenizer(text)
+        analizador.obtener_tokens()
+        tokens =  analizador.return_tokens()
+
+        self.tokensTable.setRowCount(len(tokens))
+
+        # Mostramos los tokens en la tabla
+        for i, token in enumerate(tokens):
+            tipo = QTableWidgetItem(token[0])
+            valor = QTableWidgetItem(token[1])
+            _id = QTableWidgetItem(str(token[2]))
+
+            self.tokensTable.setItem(i, 0, tipo)
+            self.tokensTable.setItem(i, 1, valor)
+            self.tokensTable.setItem(i, 2, _id)
+
+#Ejecutamos la interfaz grafica
 if __name__ == '__main__':
-    main()
+    app = QApplication(sys.argv)
+    mainWin = MainWindow()
+    mainWin.show()
+    sys.exit(app.exec_())
