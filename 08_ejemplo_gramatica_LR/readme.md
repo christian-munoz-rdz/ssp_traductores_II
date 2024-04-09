@@ -21,10 +21,10 @@ El analizador realiza los siguientes pasos:
 
 En la actividad se sugiere introducir la cadena de prueba 'int hola;' para verificar el funcionamiento del analizador. La cadena es válida y el árbol de análisis se muestra correctamente como podemos ver en la siguiente imagen:
 
-![Captura 1](img\prueba_de_analisis.png)
+![Captura 1](img/prueba_de_analisis.png)
 
 #### Representación del Árbol de Análisis con un grafo:
 
-![Captura 2](img\tree.png)
+![Captura 2](img/tree.png)
 
 e = lambda
