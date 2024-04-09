@@ -1,6 +1,7 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QTextEdit, QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget, QHBoxLayout
+from PyQt5.QtWidgets import QApplication, QMainWindow, QTextEdit, QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget, QHBoxLayout, QMessageBox
 import scanner
+import parser
 
 # Clase principal de la ventana de la aplicación
 class TokenizerWindow(QMainWindow):
@@ -30,7 +31,7 @@ class TokenizerWindow(QMainWindow):
         self.tableWidget.setHorizontalHeaderLabels(['Token', 'Lexema', 'Número'])
         layout.addWidget(self.tableWidget)
 
-        #Añadir text edit vacío a la derecha
+        #Espacio para parsing tree
         self.textEdit2 = QTextEdit()
         layout.addWidget(self.textEdit2)
         
@@ -43,11 +44,18 @@ class TokenizerWindow(QMainWindow):
         codigo = self.textEdit.toPlainText() + "$"
         tokens = scanner.obtener_tokens(codigo)
         self.tableWidget.setRowCount(len(tokens))
+        acepted = parser.analizar(tokens)
         
         for i, token in enumerate(tokens):
             self.tableWidget.setItem(i, 0, QTableWidgetItem(token.simbolo))
             self.tableWidget.setItem(i, 1, QTableWidgetItem(token.lexema))
             self.tableWidget.setItem(i, 2, QTableWidgetItem(str(token.numero)))
+        
+        if acepted:
+            self.textEdit2.setText(parsing_tree)
+            QMessageBox.about(self, "Resultado", "Sintaxis correcta")
+        else:
+            QMessageBox.about(self, "Resultado", "Error de sintaxis")
         
 # Punto de entrada de la aplicación
 def main():
