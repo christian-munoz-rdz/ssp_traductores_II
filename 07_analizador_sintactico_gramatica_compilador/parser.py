@@ -1,4 +1,5 @@
 import pandas as pd
+import scanner
 
 parsing_table = pd.read_csv('compilador.csv', index_col=0)
 
@@ -6,20 +7,20 @@ parsing_table.fillna("error", inplace=True)
 
 reducciones= {
     1: ('programa', 1),
-    2: ('Definiciones', 1),
-    3: ('Definiciones ', 2),
+    2: ('Definiciones', 0),
+    3: ('Definiciones', 2),
     4: ('Definicion', 1),
     5: ('Definicion', 1),
     6: ('DefVar', 4),
-    7: ('ListaVar', 1),
+    7: ('ListaVar', 0),
     8: ('ListaVar', 3),
     9: ('DefFunc', 6),
-    10: ('Parametros', 1),
+    10: ('Parametros', 0),
     11: ('Parametros', 3),
     12: ('ListaParam', 0),
     13: ('ListaParam', 4),
     14: ('BloqFunc', 3),
-    15: ('DefLocales', 1),
+    15: ('DefLocales', 0),
     16: ('DefLocales', 2),
     17: ('DefLocal', 1),
     18: ('DefLocal', 1),
@@ -30,14 +31,14 @@ reducciones= {
     23: ('Sentencia', 5),
     24: ('Sentencia', 3),
     25: ('Sentencia', 2),
-    26: ('Otro', 1),
+    26: ('Otro', 0),
     27: ('Otro', 2),
     28: ('Bloque', 3),
-    29: ('ValorRegresa', 1),
+    29: ('ValorRegresa', 0),
     30: ('ValorRegresa', 1),
-    31: ('Argumentos', 1),
+    31: ('Argumentos', 0),
     32: ('Argumentos', 2),
-    33: ('ListaArgumentos', 1),
+    33: ('ListaArgumentos', 0),
     34: ('ListaArgumentos', 3),
     35: ('Termino', 1),
     36: ('Termino', 1),
@@ -86,25 +87,33 @@ def analizar(tokens):
         accion = parsing_table.loc[estado, token.simbolo]
         if accion == 'r0':
             acepted = True
-            break
+            break	
         elif accion[0] == 'd':
             pila.push(token.simbolo)
             pila.push(int(accion[1:]))
-            i += 1
+            if token.simbolo == '$':
+                continue
+            else:
+                i += 1
         elif accion[0] == 'r':
             regla = int(accion[1:])
             regla = reducciones[regla]
             no_terminal = regla[0]
             for _ in range(regla[1]*2):
                 pila.pop()
-            print(pila.pila)
             estado = pila.top()
             pila.push(no_terminal)
-            print(f"No terminal: {no_terminal}")
-            print(f"Estado: {estado}")
-            pila.push(parsing_table.loc[estado, no_terminal])
+            pila.push(int(parsing_table.loc[estado, no_terminal]))
         else:
             break
     return acepted
+
+if __name__ == '__main__':
+    codigo = """
+        void identificador(int a, float b) { int x; }$
+    """
+    tokens = scanner.obtener_tokens(codigo)
+    acepted = analizar(tokens)
+    print(acepted)
 
 
