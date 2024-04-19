@@ -186,6 +186,8 @@ reducciones= {
     52: ('Expresion', 1)
 }
 
+non_terminals = ['programa', 'Definiciones', 'Definicion', 'DefVar', 'ListaVar', 'DefFunc', 'Parametros', 'ListaParam', 'BloqFunc', 'DefLocales', 'DefLocal', 'Sentencias', 'Sentencia', 'Otro', 'Bloque', 'ValorRegresa', 'Argumentos', 'ListaArgumentos', 'Termino', 'LlamadaFunc', 'SentenciaBloque', 'Expresion']
+
 class Pila:
     def __init__(self):
         self.pila = []
@@ -206,18 +208,29 @@ def analizar(tokens):
     longitud = len(tokens)
     acepted = False
 
+    # Crea la raíz del árbol de análisis
+    root = anytree.Node("programa")
+    current_node = root # rastrera el nodo actual para agregar hijos
+    node_stack = []  # Stack to keep track of the current node
+
     while i < longitud:
-        anytree.RenderTree(pila.pila)
         print(pila.pila)
+        
         token = tokens[i]
         estado = pila.top()
         accion = parsing_table.loc[estado, token.simbolo]
         if accion == 'r0':
             acepted = True
+            root.children = node_stack
             break	
         elif accion[0] == 'd':
             pila.push(token)
             pila.push(int(accion[1:]))
+
+            # Create a new node for the token and add it as a child
+            new_termianl = anytree.Node(token.simbolo, parent=None)
+            node_stack.append(new_termianl)
+
             if token.simbolo == '$':
                 continue
             else:
@@ -226,6 +239,14 @@ def analizar(tokens):
             regla = int(accion[1:])
             regla = reducciones[regla]
             no_terminal = regla[0]
+
+            new_non_terminal = anytree.Node(no_terminal, parent=None)
+            for _ in range(regla[1]):
+                current_node = node_stack.pop()
+                current_node.parent = new_non_terminal
+            
+            node_stack.append(new_non_terminal)
+            
             for _ in range(regla[1]*2):
                 pila.pop()
             estado = pila.top()
@@ -233,14 +254,30 @@ def analizar(tokens):
             pila.push(int(parsing_table.loc[estado, no_terminal]))
         else:
             break
-    return acepted
+    
+    if acepted:
+        #recorrer el arbol para eliminar todas las hojas sin hijos que sean no terminales
+        for pre, _, node in anytree.RenderTree(root):
+            if node.children == ():
+                if node.name in non_terminals:
+                    node.parent = None
+        
+        #convertir el arbol a string
+        arbol = anytree.RenderTree(root).by_attr()
+
+        #imprimir el arbol
+        #print(arbol)
+        
+        #Retornar la bandera de aceptación y el arbol
+        return (acepted, arbol)
+    else:
+        return (acepted, None)
 
 '''
 if __name__ == '__main__':
-    cadena_prueba = """void identificador(int a, float b) { int x; }$"""
+    cadena_prueba = """void funcion(int a, float b) { int x; }$"""
     tokens = obtener_tokens(cadena_prueba)
-    print(analizar(tokens))
-
+    analizar(tokens)
 '''
 
 # Clase principal de la ventana de la aplicación
@@ -284,7 +321,7 @@ class TokenizerWindow(QMainWindow):
         codigo = self.textEdit.toPlainText() + "$"
         tokens = obtener_tokens(codigo)
         self.tableWidget.setRowCount(len(tokens))
-        acepted = analizar(tokens)
+        acepted, arbol = analizar(tokens)
         
         for i, token in enumerate(tokens):
             self.tableWidget.setItem(i, 0, QTableWidgetItem(token.simbolo))
@@ -293,8 +330,10 @@ class TokenizerWindow(QMainWindow):
         
         if acepted:
             QMessageBox.about(self, "Resultado", "Sintaxis correcta")
+            self.textEdit2.setText(arbol)
         else:
             QMessageBox.about(self, "Resultado", "Error de sintaxis")
+            self.textEdit2.setText("Error de sintaxis. Arbol no disponible")
         
 # Punto de entrada de la aplicación
 def main():
