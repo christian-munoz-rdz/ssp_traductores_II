@@ -186,7 +186,9 @@ reducciones= {
     52: ('Expresion', 1)
 }
 
-non_terminals = ['programa', 'Definiciones', 'Definicion', 'DefVar', 'ListaVar', 'DefFunc', 'Parametros', 'ListaParam', 'BloqFunc', 'DefLocales', 'DefLocal', 'Sentencias', 'Sentencia', 'Otro', 'Bloque', 'ValorRegresa', 'Argumentos', 'ListaArgumentos', 'Termino', 'LlamadaFunc', 'SentenciaBloque', 'Expresion']
+non_terminals = ['programa', 'Definiciones', 'Definicion', 'DefVar', 'ListaVar', 'DefFunc', 'Parametros', 'ListaParam', 'BloqFunc', 'DefLocales', 
+                 'DefLocal', 'Sentencias', 'Sentencia', 'Otro', 'Bloque', 'ValorRegresa', 'Argumentos', 'ListaArgumentos', 'Termino', 'LlamadaFunc', 
+                 'SentenciaBloque', 'Expresion']
 
 class Pila:
     def __init__(self):
