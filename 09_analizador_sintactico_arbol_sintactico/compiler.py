@@ -2,6 +2,7 @@ import pandas as pd
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QTextEdit, QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget, QHBoxLayout, QMessageBox
 import anytree
+import graphviz as gv
 
 def es_letra(c):
     return c.isalpha()
@@ -64,7 +65,7 @@ class Token:
         self.numero = numero 
     
     def __str__(self):
-        return f"( Token: {self.lexema}, {self.simbolo}, {self.numero} )"
+        return f"[{self.simbolo} -> {self.lexema}]"
     
     def __repr__(self):
         return str(self)
@@ -117,12 +118,11 @@ def obtener_tokens(codigo):
                 if (i + 1) < longitud and (current_token + codigo[i + 1]) in simbolos:
                     i += 1
                     current_token += codigo[i]
-                    tokens.append(Token(current_token, current_token, tabla_simbolos[current_token][1]))
+                    tokens.append(Token(current_token, tabla_simbolos[current_token][0], tabla_simbolos[current_token][1]))
                     i += 1
                 else:
-                    tokens.append(Token(current_token, current_token, tabla_simbolos[current_token][1]))
+                    tokens.append(Token(current_token, tabla_simbolos[current_token][0], tabla_simbolos[current_token][1]))
                     i += 1
-            
     return tokens
 
 #cadena_prueba = """void identificador(int a, float b) { int x; }$"""
@@ -213,7 +213,7 @@ def analizar(tokens):
     # Crea la raíz del árbol de análisis
     root = anytree.Node("programa")
     current_node = root # rastrera el nodo actual para agregar hijos
-    node_stack = []  # Stack to keep track of the current node
+    node_stack = []  # Pila para almacenar los nodos del árbol
 
     while i < longitud:
         print(pila.pila)
@@ -229,8 +229,8 @@ def analizar(tokens):
             pila.push(token)
             pila.push(int(accion[1:]))
 
-            # Create a new node for the token and add it as a child
-            new_termianl = anytree.Node(token.simbolo, parent=None)
+            # Crea un nuevo nodo terminal y lo agrega al stack
+            new_termianl = anytree.Node(token.lexema, parent=current_node)
             node_stack.append(new_termianl)
 
             if token.simbolo == '$':
@@ -258,35 +258,29 @@ def analizar(tokens):
             break
     
     if acepted:
-        #recorrer el arbol para eliminar todas las hojas sin hijos que sean no terminales
+        #recorrer el self.arbol para eliminar todas las hojas sin hijos que sean no terminales
         for pre, _, node in anytree.RenderTree(root):
             if node.children == ():
                 if node.name in non_terminals:
                     node.parent = None
-        
-        #convertir el arbol a string
+
         arbol = anytree.RenderTree(root).by_attr()
 
-        #imprimir el arbol
-        #print(arbol)
+        #imprimir el self.arbol
+        #print(self.arbol)
         
-        #Retornar la bandera de aceptación y el arbol
+        #Retornar la bandera de aceptación y el self.arbol
         return (acepted, arbol)
     else:
         return (acepted, None)
-
-'''
-if __name__ == '__main__':
-    cadena_prueba = """void funcion(int a, float b) { int x; }$"""
-    tokens = obtener_tokens(cadena_prueba)
-    analizar(tokens)
-'''
 
 # Clase principal de la ventana de la aplicación
 class TokenizerWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.initUI()
+        self.acepted = False
+        self.arbol = None
         
     def initUI(self):
         self.setWindowTitle('Compilador')
@@ -294,15 +288,19 @@ class TokenizerWindow(QMainWindow):
         
         # Layout principal
         layout = QHBoxLayout()
+        vlayout_scan = QVBoxLayout()
+        vlayout_tree = QVBoxLayout()
         
         # Área de texto para entrada de código
         self.textEdit = QTextEdit()
-        layout.addWidget(self.textEdit)
+        vlayout_scan.addWidget(self.textEdit)
         
         # Botón para analizar el texto
         self.btnAnalyze = QPushButton('Analizar')
         self.btnAnalyze.clicked.connect(self.analyzeText)
-        layout.addWidget(self.btnAnalyze)
+        vlayout_scan.addWidget(self.btnAnalyze)
+
+        layout.addLayout(vlayout_scan)
         
         # Tabla para mostrar los tokens
         self.tableWidget = QTableWidget()
@@ -312,7 +310,9 @@ class TokenizerWindow(QMainWindow):
 
         #Espacio para parsing tree
         self.textEdit2 = QTextEdit()
-        layout.addWidget(self.textEdit2)
+        vlayout_tree.addWidget(self.textEdit2)
+
+        layout.addLayout(vlayout_tree)
         
         # Widget contenedor y set layout
         container = QWidget()
@@ -323,16 +323,16 @@ class TokenizerWindow(QMainWindow):
         codigo = self.textEdit.toPlainText() + "$"
         tokens = obtener_tokens(codigo)
         self.tableWidget.setRowCount(len(tokens))
-        acepted, arbol = analizar(tokens)
+        self.acepted, self.arbol = analizar(tokens)
         
         for i, token in enumerate(tokens):
             self.tableWidget.setItem(i, 0, QTableWidgetItem(token.simbolo))
             self.tableWidget.setItem(i, 1, QTableWidgetItem(token.lexema))
             self.tableWidget.setItem(i, 2, QTableWidgetItem(str(token.numero)))
         
-        if acepted:
+        if self.acepted:
             QMessageBox.about(self, "Resultado", "Sintaxis correcta")
-            self.textEdit2.setText(arbol)
+            self.textEdit2.setText(self.arbol)
         else:
             QMessageBox.about(self, "Resultado", "Error de sintaxis")
             self.textEdit2.setText("Error de sintaxis. Arbol no disponible")
