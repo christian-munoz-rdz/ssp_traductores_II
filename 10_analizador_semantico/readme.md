@@ -22,3 +22,41 @@ Agrgué un modulo llamado `SemanticAnalyser` para realizar comprobaciones semán
 1. **Análisis de Tokens**: Cada token del código fuente es procesado y según su contexto, se invocan las rutinas semánticas correspondientes utilizando un mapa de acciones a rutinas (`semantic_checks`).
 2. **Acciones Semánticas**: Las acciones se determinan en base a los símbolos de acción encontrados en el código (p. ej., `#SA_SAVE_TYPE`), y se ejecutan las funciones correspondientes que manipulan las estructuras de datos en la tabla de símbolos y verifican la corrección del uso de variables y funciones.
 3. **Finalización y Verificación**: Al final del análisis, se revisa que todas las condiciones necesarias para un programa válido se cumplen y se reportan errores si es necesario.
+
+## Pruebas
+
+### Ejemplo 1
+```c
+int main(){
+float a;
+int b;
+int c;
+c = a+b;
+c = suma(8,9);
+}
+```
+![alt text](/images/semantic_test1.png)
+
+
+### Ejemplo 2
+```c
+int a;
+int suma(int a, int b){
+return a+b;
+}
+```
+
+![alt text](/images/semantic_test2.png)
+
+### Ejemplo 3
+```c
+int main(){
+float a;
+int b;
+int c;
+c = a+b;
+c = suma(8.5,9.9);
+}
+```
+
+![alt text](/images/semantic_test3.png)
