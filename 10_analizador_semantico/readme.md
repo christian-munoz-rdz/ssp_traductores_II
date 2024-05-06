@@ -22,5 +22,3 @@ Agrgué un modulo llamado `SemanticAnalyser` para realizar comprobaciones semán
 1. **Análisis de Tokens**: Cada token del código fuente es procesado y según su contexto, se invocan las rutinas semánticas correspondientes utilizando un mapa de acciones a rutinas (`semantic_checks`).
 2. **Acciones Semánticas**: Las acciones se determinan en base a los símbolos de acción encontrados en el código (p. ej., `#SA_SAVE_TYPE`), y se ejecutan las funciones correspondientes que manipulan las estructuras de datos en la tabla de símbolos y verifican la corrección del uso de variables y funciones.
 3. **Finalización y Verificación**: Al final del análisis, se revisa que todas las condiciones necesarias para un programa válido se cumplen y se reportan errores si es necesario.
-
-Este módulo es un ejemplo de cómo se pueden estructurar las comprobaciones semánticas en el proceso de compilación, asegurando que el código no solo es sintácticamente correcto sino también semánticamente válido según las reglas del lenguaje de programación.
