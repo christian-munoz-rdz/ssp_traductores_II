@@ -35,7 +35,7 @@ c = a+b;
 c = suma(8,9);
 }
 ```
-![alt text](/images/semantic_test1.png)
+![alt text](images/semantic_test1.png)
 
 
 ### Ejemplo 2
@@ -46,7 +46,7 @@ return a+b;
 }
 ```
 
-![alt text](/images/semantic_test2.png)
+![alt text](images/semantic_test2.png)
 
 ### Ejemplo 3
 ```c
@@ -59,4 +59,4 @@ c = suma(8.5,9.9);
 }
 ```
 
-![alt text](/images/semantic_test3.png)
+![alt text](images/semantic_test3.png)
