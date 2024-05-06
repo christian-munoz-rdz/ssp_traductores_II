@@ -1,79 +1,26 @@
-# Simple C Compiler written in Python
+# Compilador: Fase de Generación de Análisis semántico
 
-Simple C Compiler supports a subset of C programming language. Most notably it has only integer typed variables. Nevertheless, it is a fully functional C compiler front-end for generating intermediate representation (IR) three address codes from a C source file. Furthermore, an interpreter program [1] for the three address "assembly" code is provided for all major platforms (Windows, Linux and Mac) to execute the programs with ease.
+## Modulo de análisis semántico
 
-As the name hints, it is also simple to use! Only one python module needed to start using it!
+Agrgué un modulo llamado `SemanticAnalyser` para realizar comprobaciones semánticas. Esta clase utiliza otras clases y módulos para gestionar la tabla de símbolos y la memoria durante la compilación.
 
-This compiler implementation is also part of a [blog post about designing and implementing compilers](https://medium.com/@pasi_pyrro/how-to-write-your-own-c-compiler-from-scratch-with-python-90ab84ffe071), you might wanna check it out!
+### Inicialización y Estructuras de Datos
+- **Tablas de Símbolos y Manejo de Memoria**: `SemanticAnalyser` interactúa con `SymbolTableManager` y `MemoryManager` para manipular el entorno de símbolos y la asignación de memoria respectivamente.
+- **Diccionarios y Pilas**: Utiliza diccionarios para almacenar rutinas semánticas específicas y varias pilas para manejar la verificación de tipos, argumentos de funciones, y otros aspectos relacionados con el alcance y el contexto de uso de las variables y funciones.
 
-## Requirements
-All major operating systems (Windows, Linux and Mac) should be supported.
+### Rutinas Semánticas
+- **Rutinas de Alcance**: Incrementa (`inc_scope_routine`) o decrementa (`dec_scope_routine`) el alcance actual en la tabla de símbolos, lo que afecta a la visibilidad de las variables y funciones.
+- **Manejo de Tipos y Variables**: Guarda tipos de datos y asigna estos tipos a las variables o funciones según el contexto. Por ejemplo, `save_type_routine` y `assign_type_routine`.
+- **Verificación de la Función `main`**: Verifica que exista una función `main` adecuadamente definida y que sea la última función definida en el nivel global (`check_main_routine`).
+- **Manejo de Funciones y Argumentos**: Guarda las características de las funciones y verifica la adecuación de los argumentos pasados a estas (`save_fun_routine`, `check_args_routine`).
 
-Make sure Python 3.6 or newer interpreter is installed on your system. Then install the ``anytree`` package with pip
+### Comprobaciones de Error y Gestión de Errores
+- **Registro de Errores**: Los errores detectados durante la fase de análisis semántico se almacenan y se pueden escribir en un archivo para su revisión.
+- **Verificaciones Finales**: Al final del archivo o del código fuente, verifica si todas las condiciones necesarias para un programa semánticamente correcto se han cumplido, como la presencia y la correcta definición de la función `main`.
 
-```bash
+### Flujo de Operación
+1. **Análisis de Tokens**: Cada token del código fuente es procesado y según su contexto, se invocan las rutinas semánticas correspondientes utilizando un mapa de acciones a rutinas (`semantic_checks`).
+2. **Acciones Semánticas**: Las acciones se determinan en base a los símbolos de acción encontrados en el código (p. ej., `#SA_SAVE_TYPE`), y se ejecutan las funciones correspondientes que manipulan las estructuras de datos en la tabla de símbolos y verifican la corrección del uso de variables y funciones.
+3. **Finalización y Verificación**: Al final del análisis, se revisa que todas las condiciones necesarias para un programa válido se cumplen y se reportan errores si es necesario.
 
-pip install anytree
-```
-
-## Installation and Testing
-
-For testing the compiler here is a simple test program that prints the 15 first odd numbers
-```c
-/* 
- * Simple example source code
- * 
- * prints N odd numbers
- */
-
-void main(void) {
-    /* all variables need to be declared first */
-    int i;
-    int j;
-    int m;
-    int N;
-    
-    /* ...and then assigned to */
-    i = 1;
-    j = 1;
-    m = 0-1; // syntax only supports binary operations, this is how we get -1
-
-    N = 15; // change me to increase number of odd numbers
-
-    while (i < N * 2 + 1) {
-        j = m * j;
-        if (j < 0) {
-            output(i);
-        } else {
-            // do nothing, the syntax does not support if without else :^)
-        }
-        i = i + 1;
-    }
-}
-```
-
-To compile and run it, type
-```bash
-git clone https://github.com/Hyper5phere/simple-c-compiler.git
-cd simple-c-compiler
-python compiler.py input/input_simple.c --run
-```
-
-To see all input arguments type
-```bash
-python compiler.py --help
-```
-
-All output of the compiler is stored in the ``./output`` folder and all the input examples can be found from ``./input`` folder. Additionally errors are logged in the ``./errors`` folder if ``--error-files`` input flag is used.
-
-
-## Possible Future Improvements
-Language support for
-- arrays
-- recursion
-- string types
-- nested functions (not really C though)
-
-## References
-[1] The interpreter program has been implemented by Romina Jafarian, at Computer Engineering Department of Sharif
-University of Technology (Tehran) in Fall 2017.
+Este módulo es un ejemplo de cómo se pueden estructurar las comprobaciones semánticas en el proceso de compilación, asegurando que el código no solo es sintácticamente correcto sino también semánticamente válido según las reglas del lenguaje de programación.
