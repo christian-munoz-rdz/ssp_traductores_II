@@ -1,0 +1,1 @@
+void funcion(int a, float b) { int x; }
