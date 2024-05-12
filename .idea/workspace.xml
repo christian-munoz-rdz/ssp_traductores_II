@@ -5,7 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="675ff00d-be7f-4d7c-8743-7aba7b541280" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/07_analizador_sintactico_gramatica_compilador/parser.py" beforeDir="false" afterPath="$PROJECT_DIR$/07_analizador_sintactico_gramatica_compilador/parser.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/10_analizador_semantico/compiler.py" beforeDir="false" afterPath="$PROJECT_DIR$/10_analizador_semantico/compiler.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -123,6 +123,7 @@
       <workItem from="1709533538651" duration="5315000" />
       <workItem from="1711875793897" duration="42000" />
       <workItem from="1712198760681" duration="390000" />
+      <workItem from="1715551791569" duration="6000" />
     </task>
     <servers />
   </component>

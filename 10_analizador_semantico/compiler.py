@@ -2,8 +2,63 @@ import pandas as pd
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QTextEdit, QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget, QHBoxLayout, QMessageBox
 import anytree
-import graphviz as gv
-import semantic_analyser
+
+'''
+Gramática:
+
+R1 = programa -> Definiciones 
+R2 = Definiciones -> \e 
+R3 = Definiciones -> Definicion Definiciones
+R4 = Definicion -> DefVar
+R5 = Definicion -> DefFunc
+R6 = DefVar -> tipo identificador ListaVar ;
+R7 = ListaVar -> \e
+R8 = ListaVar -> , identificador ListaVar 
+R9 = DefFunc -> tipo identificador ( Parametros ) BloqFunc 
+R10 = Parametros -> \e
+R11 = Parametros -> tipo identificador ListaParam
+R12 = ListaParam -> \e
+R13 = ListaParam -> , tipo identificador ListaParam
+R14 = BloqFunc -> { DefLocales }
+R15 = DefLocales -> \e
+R16 = DefLocales -> DefLocal DefLocales
+R17 = DefLocal -> DefVar
+R18 = DefLocal -> Sentencia
+R19 = Sentencias -> \e
+R20 = Sentencias -> Sentencia Sentencias
+R21 = Sentencia -> identificador = Expresion ;
+R22 = Sentencia -> if ( Expresion ) SentenciaBloque Otro 
+R23 = Sentencia -> while ( Expresion ) Bloque
+R24 = Sentencia -> return ValorRegresa ;
+R25 = Sentencia -> LlamadaFunc ;
+R26 = Otro -> \e
+R27 = Otro -> else SentenciaBloque
+R28 = Bloque -> { Sentencias }
+R29 = ValorRegresa -> \e
+R30 = ValorRegresa -> Expresion
+R31 = Argumentos -> \e
+R32 = Argumentos -> Expresion ListaArgumentos
+R33 = ListaArgumentos -> \e
+R34 = ListaArgumentos -> , Expresion ListaArgumentos
+R35 = Termino -> LlamadaFunc
+R36 = Termino -> identificador
+R37 = Termino -> entero
+R38 = Termino -> real
+R39 = Termino -> cadena
+R40 = LlamadaFunc -> identificador ( Argumentos )
+R41 = SentenciaBloque -> Sentencia
+R42 = SentenciaBloque -> Bloque
+R43 = Expresion -> ( Expresion )
+R44 = Expresion -> opSuma Expresion
+R45 = Expresion -> opNot Expresion
+R46 = Expresion -> Expresion opMul Expresion
+R47 = Expresion -> Expresion opSuma Expresion
+R48 = Expresion -> Expresion opRelac Expresion
+R49 = Expresion -> Expresion opIgualdad Expresion
+R50 = Expresion -> Expresion opAnd Expresion
+R51 = Expresion -> Expresion opOr Expresion
+R52 = Expresion -> Termino
+'''
 
 def es_letra(c):
     return c.isalpha()
@@ -30,9 +85,31 @@ def es_numero_real(cadena):
             return False
     else:
         return False
-        
 
-tabla_simbolos = {
+
+class SymbolTable:
+    def __init__(self):
+        self.table = {}
+        self.current_scope = [{}]  # Lista de diccionarios, uno por cada nivel de anidamiento
+
+    def enter_scope(self):
+        self.current_scope.append({})
+
+    def exit_scope(self):
+        self.current_scope.pop()
+
+    def declare(self, name, symbol_info):
+        if name in self.current_scope[-1]:
+            raise Exception(f"Error: Variable '{name}' ya declarada en este ámbito.")
+        self.current_scope[-1][name] = symbol_info
+
+    def lookup(self, name):
+        for scope in reversed(self.current_scope):
+            if name in scope:
+                return scope[name]
+        raise Exception(f"Error: Variable '{name}' no declarada.")
+
+lexemas = {
     "int": ("tipo", 4), "float": ("tipo", 4), "void": ("tipo", 4), 
     "+": ("opSuma", 5), "-": ("opSuma", 5), 
     "*": ("opMul", 6), "/": ("opMul", 6),
@@ -90,7 +167,7 @@ def obtener_tokens(codigo):
                 i += 1
 
             if current_token in palabras_reservadas:
-                tokens.append(Token(current_token, tabla_simbolos[current_token][0], tabla_simbolos[current_token][1]))
+                tokens.append(Token(current_token, lexemas[current_token][0], lexemas[current_token][1]))
             else:
                 tokens.append(Token(current_token, "identificador", 0))
         elif es_digito(codigo[i]):
@@ -119,10 +196,10 @@ def obtener_tokens(codigo):
                 if (i + 1) < longitud and (current_token + codigo[i + 1]) in simbolos:
                     i += 1
                     current_token += codigo[i]
-                    tokens.append(Token(current_token, tabla_simbolos[current_token][0], tabla_simbolos[current_token][1]))
+                    tokens.append(Token(current_token, lexemas[current_token][0], lexemas[current_token][1]))
                     i += 1
                 else:
-                    tokens.append(Token(current_token, tabla_simbolos[current_token][0], tabla_simbolos[current_token][1]))
+                    tokens.append(Token(current_token, lexemas[current_token][0], lexemas[current_token][1]))
                     i += 1
     return tokens
 
@@ -216,6 +293,8 @@ def analizar(tokens):
     current_node = root # rastrera el nodo actual para agregar hijos
     node_stack = []  # Pila para almacenar los nodos del árbol
 
+    symbol_table = SymbolTable()
+
     while i < longitud:
         print(pila.pila)
         
@@ -255,6 +334,104 @@ def analizar(tokens):
             estado = pila.top()
             pila.push(no_terminal)
             pila.push(int(parsing_table.loc[estado, no_terminal]))
+
+            if no_terminal == 'DefVar':
+                tipo = tokens[i-3].lexema
+                nombre = tokens[i-2].lexema
+                try:
+                    symbol_table.declare(nombre, {'tipo': tipo})
+                except Exception as e:
+                    print(e)
+                    return (False, None)
+            elif no_terminal == 'DefFunc':
+                tipo = tokens[i-3].lexema
+                nombre = tokens[i-2].lexema
+                try:
+                    symbol_table.declare(nombre, {'tipo': tipo})
+                except Exception as e:
+                    print(e)
+                    return (False, None)
+                symbol_table.enter_scope()
+            elif no_terminal == 'BloqFunc':
+                symbol_table.exit_scope()
+            elif no_terminal == 'DefLocal':
+                tipo = tokens[i-3].lexema
+                nombre = tokens[i-2].lexema
+                try:
+                    symbol_table.declare(nombre, {'tipo': tipo})
+                except Exception as e:
+                    print(e)
+                    return (False, None)
+            elif no_terminal == 'Sentencia':
+                if tokens[i-1].lexema == '=':
+                    nombre = tokens[i-2].lexema
+                    try:
+                        symbol_table.lookup(nombre)
+                    except Exception as e:
+                        print(e)
+                        return (False, None)
+            elif no_terminal == 'LlamadaFunc':
+                nombre = tokens[i-4].lexema
+                try:
+                    symbol_table.lookup(nombre)
+                except Exception as e:
+                    print(e)
+                    return (False, None)
+            elif no_terminal == 'ValorRegresa':
+                if tokens[i-1].lexema != ';':
+                    nombre = tokens[i-2].lexema
+                    try:
+                        symbol_table.lookup(nombre)
+                    except Exception as e:
+                        print(e)
+                        return (False, None)
+            elif no_terminal == 'Termino':
+                if tokens[i-1].simbolo == 'identificador':
+                    nombre = tokens[i-1].lexema
+                    try:
+                        symbol_table.lookup(nombre)
+                    except Exception as e:
+                        print(e)
+                        return (False, None)
+            elif no_terminal == 'Expresion':
+                if tokens[i-2].simbolo == 'identificador':
+                    nombre = tokens[i-2].lexema
+                    try:
+                        symbol_table.lookup(nombre)
+                    except Exception as e:
+                        print(e)
+                        return (False, None)
+                if tokens[i-2].simbolo == '(':
+                    if tokens[i-3].simbolo == 'identificador':
+                        nombre = tokens[i-3].lexema
+                        try:
+                            symbol_table.lookup(nombre)
+                        except Exception as e:
+                            print(e)
+                            return (False, None)
+            elif no_terminal == 'DefLocales':
+                pass
+            elif no_terminal == 'Parametros':
+                pass
+            elif no_terminal == 'ListaParam':
+                pass
+            elif no_terminal == 'ListaVar':
+                pass
+            elif no_terminal == 'ListaArgumentos':
+                pass
+            elif no_terminal == 'Argumentos':
+                pass
+            elif no_terminal == 'Sentencias':
+                pass
+            elif no_terminal == 'SentenciaBloque':
+                pass
+            elif no_terminal == 'Otro':
+                pass
+            elif no_terminal == 'Bloque':
+                pass
+            elif no_terminal == 'programa':
+                pass
+
         else:
             break
     
@@ -324,7 +501,12 @@ class TokenizerWindow(QMainWindow):
         codigo = self.textEdit.toPlainText() + "$"
         tokens = obtener_tokens(codigo)
         self.tableWidget.setRowCount(len(tokens))
-        self.acepted, self.arbol = analizar(tokens)
+        try:
+            self.acepted, self.arbol = analizar(tokens)
+        except Exception as e:
+            QMessageBox.about(self, "Resultado", str(e))
+            self.textEdit2.setText("Error de análisis semántico. Árbol no disponible")
+            return
         
         for i, token in enumerate(tokens):
             self.tableWidget.setItem(i, 0, QTableWidgetItem(token.simbolo))
@@ -332,11 +514,11 @@ class TokenizerWindow(QMainWindow):
             self.tableWidget.setItem(i, 2, QTableWidgetItem(str(token.numero)))
         
         if self.acepted:
-            QMessageBox.about(self, "Resultado", "Sintaxis correcta")
+            QMessageBox.about(self, "Resultado", "Sintaxis y semántica correctas")
             self.textEdit2.setText(self.arbol)
         else:
             QMessageBox.about(self, "Resultado", "Error de sintaxis")
-            self.textEdit2.setText("Error de sintaxis. Arbol no disponible")
+            self.textEdit2.setText("Error de sintaxis. Árbol no disponible")
         
 # Punto de entrada de la aplicación
 def main():
