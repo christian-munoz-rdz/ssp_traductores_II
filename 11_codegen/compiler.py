@@ -3,9 +3,9 @@ import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QTextEdit, QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget, QHBoxLayout, QMessageBox
 import anytree
 
-'''
+# Definición de la gramática
+gramatica = """
 Gramática:
-
 R1 = programa -> Definiciones 
 R2 = Definiciones -> \e 
 R3 = Definiciones -> Definicion Definiciones
@@ -58,8 +58,9 @@ R49 = Expresion -> Expresion opIgualdad Expresion
 R50 = Expresion -> Expresion opAnd Expresion
 R51 = Expresion -> Expresion opOr Expresion
 R52 = Expresion -> Termino
-'''
+"""
 
+# Definición de las funciones auxiliares para el análisis léxico
 def es_letra(c):
     return c.isalpha()
 
@@ -86,7 +87,6 @@ def es_numero_real(cadena):
     else:
         return False
 
-
 class SymbolTable:
     def __init__(self):
         self.table = {}
@@ -103,12 +103,33 @@ class SymbolTable:
             raise Exception(f"Error: Variable '{name}' ya declarada en este ámbito.")
         self.current_scope[-1][name] = symbol_info
 
+    def declare_function(self, name, return_type, parameters):
+        if name in self.current_scope[-1]:
+            raise Exception(f"Error: Función '{name}' ya declarada en este ámbito.")
+        self.current_scope[-1][name] = {'type': 'function', 'return_type': return_type, 'parameters': parameters}
+
     def lookup(self, name):
         for scope in reversed(self.current_scope):
             if name in scope:
                 return scope[name]
-        raise Exception(f"Error: Variable '{name}' no declarada.")
+        raise Exception(f"Error: Variable o función '{name}' no declarada.")
 
+    def check_function_call(self, name, args):
+        func_info = self.lookup(name)
+        if func_info['type'] != 'function':
+            raise Exception(f"Error: '{name}' no es una función.")
+        if len(args) != len(func_info['parameters']):
+            raise Exception(f"Error: Número incorrecto de argumentos para la función '{name}'. Se esperaban {len(func_info['parameters'])}, se recibieron {len(args)}.")
+        for arg, param in zip(args, func_info['parameters']):
+            if arg['type'] != param['type']:
+                raise Exception(f"Error: Tipo de argumento incorrecto para la función '{name}'. Se esperaba '{param['type']}', se recibió '{arg['type']}'.")
+
+    def check_assignment(self, name, value_type):
+        var_info = self.lookup(name)
+        if var_info['type'] != value_type:
+            raise Exception(f"Error: Tipo de asignación incorrecto para la variable '{name}'. Se esperaba '{var_info['type']}', se recibió '{value_type}'.")
+
+# Diccionarios para los lexemas y palabras reservadas
 lexemas = {
     "int": ("tipo", 4), "float": ("tipo", 4), "void": ("tipo", 4), 
     "+": ("opSuma", 5), "-": ("opSuma", 5), 
@@ -133,9 +154,9 @@ lexemas = {
 }
 
 palabras_reservadas = ["int", "float", "void", "if", "while", "return", "else"]
-
 simbolos = ["+", "-", "*", "/", "<", "<=", ">", ">=", "||", "&&", "!", "==", "!=", ";", ",", "(", ")", "{", "}", "=", "$", "&", "|"]
 
+# Clase para representar un token
 class Token:
     def __init__(self, lexema, simbolo, numero):
         self.lexema = lexema
@@ -148,8 +169,8 @@ class Token:
     def __repr__(self):
         return str(self)
 
+# Función para obtener los tokens de una cadena de código
 def obtener_tokens(codigo):
-    
     i = 0
     longitud = len(codigo)
     tokens = []
@@ -203,13 +224,12 @@ def obtener_tokens(codigo):
                     i += 1
     return tokens
 
-#cadena_prueba = """void identificador(int a, float b) { int x; }$"""
-
+# Cargar la tabla de parsing
 parsing_table = pd.read_csv('compilador.csv', index_col=0)
-
 parsing_table.fillna("error", inplace=True)
 
-reducciones= {
+# Diccionario de reducciones
+reducciones = {
     1: ('programa', 1),
     2: ('Definiciones', 0),
     3: ('Definiciones', 2),
@@ -268,6 +288,7 @@ non_terminals = ['programa', 'Definiciones', 'Definicion', 'DefVar', 'ListaVar',
                  'DefLocal', 'Sentencias', 'Sentencia', 'Otro', 'Bloque', 'ValorRegresa', 'Argumentos', 'ListaArgumentos', 'Termino', 'LlamadaFunc', 
                  'SentenciaBloque', 'Expresion']
 
+# Clase para la pila
 class Pila:
     def __init__(self):
         self.pila = []
@@ -281,6 +302,23 @@ class Pila:
     def top(self):
         return self.pila[-1]
     
+# Clase para la generación de código
+class CodeGenerator:
+    def __init__(self):
+        self.code = []
+        self.temp_count = 0
+
+    def new_temp(self):
+        temp_name = f"t{self.temp_count}"
+        self.temp_count += 1
+        return temp_name
+
+    def generate(self, instruction):
+        self.code.append(instruction)
+
+    def get_code(self):
+        return "\n".join(self.code)
+
 def analizar(tokens):
     pila = Pila()
     pila.push(0)
@@ -290,13 +328,15 @@ def analizar(tokens):
 
     # Crea la raíz del árbol de análisis
     root = anytree.Node("programa")
-    current_node = root # rastrera el nodo actual para agregar hijos
+    current_node = root # rastrea el nodo actual para agregar hijos
     node_stack = []  # Pila para almacenar los nodos del árbol
 
     symbol_table = SymbolTable()
+    code_generator = CodeGenerator()
 
     while i < longitud:
         print(pila.pila)
+        print(symbol_table.current_scope)
         
         token = tokens[i]
         estado = pila.top()
@@ -304,14 +344,14 @@ def analizar(tokens):
         if accion == 'r0':
             acepted = True
             root.children = node_stack
-            break	
+            break    
         elif accion[0] == 'd':
             pila.push(token)
             pila.push(int(accion[1:]))
 
             # Crea un nuevo nodo terminal y lo agrega al stack
-            new_termianl = anytree.Node(token.lexema, parent=current_node)
-            node_stack.append(new_termianl)
+            new_terminal = anytree.Node(token.lexema, parent=current_node)
+            node_stack.append(new_terminal)
 
             if token.simbolo == '$':
                 continue
@@ -334,7 +374,9 @@ def analizar(tokens):
             estado = pila.top()
             pila.push(no_terminal)
             pila.push(int(parsing_table.loc[estado, no_terminal]))
+            print(f"Reducir: {no_terminal}")
 
+            # Reglas para la generación de código
             if no_terminal == 'DefVar':
                 tipo = tokens[i-3].lexema
                 nombre = tokens[i-2].lexema
@@ -344,10 +386,12 @@ def analizar(tokens):
                     print(e)
                     return (False, None)
             elif no_terminal == 'DefFunc':
-                tipo = tokens[i-3].lexema
-                nombre = tokens[i-2].lexema
+                tipo = tokens[i-4].lexema
+                nombre = tokens[i-3].lexema
+                # Obtener los parámetros de la función
+                parametros = []  # Extrae los parámetros del token correspondiente
                 try:
-                    symbol_table.declare(nombre, {'tipo': tipo})
+                    symbol_table.declare_function(nombre, tipo, parametros)
                 except Exception as e:
                     print(e)
                     return (False, None)
@@ -365,15 +409,22 @@ def analizar(tokens):
             elif no_terminal == 'Sentencia':
                 if tokens[i-1].lexema == '=':
                     nombre = tokens[i-2].lexema
+                    tipo_asignacion = "int"  # Determinar el tipo de la expresión a la derecha
                     try:
-                        symbol_table.lookup(nombre)
+                        symbol_table.check_assignment(nombre, tipo_asignacion)
                     except Exception as e:
                         print(e)
                         return (False, None)
+                    # Generar código para la asignación
+                    temp_var = code_generator.new_temp()
+                    code_generator.generate(f"{temp_var} = {tokens[i-1].lexema}")
+                    code_generator.generate(f"{nombre} = {temp_var}")
             elif no_terminal == 'LlamadaFunc':
                 nombre = tokens[i-4].lexema
+                # Obtener los argumentos de la llamada a función
+                argumentos = []  # Extrae los argumentos del token correspondiente
                 try:
-                    symbol_table.lookup(nombre)
+                    symbol_table.check_function_call(nombre, argumentos)
                 except Exception as e:
                     print(e)
                     return (False, None)
@@ -436,7 +487,7 @@ def analizar(tokens):
             break
     
     if acepted:
-        #recorrer el self.arbol para eliminar todas las hojas sin hijos que sean no terminales
+        # recorrer el árbol para eliminar todas las hojas sin hijos que sean no terminales
         for pre, _, node in anytree.RenderTree(root):
             if node.children == ():
                 if node.name in non_terminals:
@@ -444,13 +495,10 @@ def analizar(tokens):
 
         arbol = anytree.RenderTree(root).by_attr()
 
-        #imprimir el self.arbol
-        #print(self.arbol)
-        
-        #Retornar la bandera de aceptación y el self.arbol
-        return (acepted, arbol)
+        # Retornar la bandera de aceptación, el árbol y el código generado
+        return (acepted, arbol, code_generator.get_code())
     else:
-        return (acepted, None)
+        return (acepted, None, None)
 
 # Clase principal de la ventana de la aplicación
 class TokenizerWindow(QMainWindow):
@@ -459,6 +507,7 @@ class TokenizerWindow(QMainWindow):
         self.initUI()
         self.acepted = False
         self.arbol = None
+        self.codigo = None
         
     def initUI(self):
         self.setWindowTitle('Compilador')
@@ -468,6 +517,7 @@ class TokenizerWindow(QMainWindow):
         layout = QHBoxLayout()
         vlayout_scan = QVBoxLayout()
         vlayout_tree = QVBoxLayout()
+        vlayout_code = QVBoxLayout()
         
         # Área de texto para entrada de código
         self.textEdit = QTextEdit()
@@ -486,11 +536,16 @@ class TokenizerWindow(QMainWindow):
         self.tableWidget.setHorizontalHeaderLabels(['Token', 'Lexema', 'Número'])
         layout.addWidget(self.tableWidget)
 
-        #Espacio para parsing tree
+        # Espacio para parsing tree
         self.textEdit2 = QTextEdit()
         vlayout_tree.addWidget(self.textEdit2)
 
+        # Espacio para el código generado
+        self.textEdit3 = QTextEdit()
+        vlayout_code.addWidget(self.textEdit3)
+
         layout.addLayout(vlayout_tree)
+        layout.addLayout(vlayout_code)
         
         # Widget contenedor y set layout
         container = QWidget()
@@ -502,7 +557,7 @@ class TokenizerWindow(QMainWindow):
         tokens = obtener_tokens(codigo)
         self.tableWidget.setRowCount(len(tokens))
         try:
-            self.acepted, self.arbol = analizar(tokens)
+            self.acepted, self.arbol, self.codigo = analizar(tokens)
         except Exception as e:
             QMessageBox.about(self, "Resultado", str(e))
             self.textEdit2.setText("Error de análisis semántico. Árbol no disponible")
@@ -516,10 +571,12 @@ class TokenizerWindow(QMainWindow):
         if self.acepted:
             QMessageBox.about(self, "Resultado", "Sintaxis y semántica correctas")
             self.textEdit2.setText(self.arbol)
+            self.textEdit3.setText(self.codigo)
         else:
             QMessageBox.about(self, "Resultado", "Error de sintaxis")
             self.textEdit2.setText("Error de sintaxis. Árbol no disponible")
-        
+            self.textEdit3.setText("")
+
 # Punto de entrada de la aplicación
 def main():
     app = QApplication(sys.argv)
