@@ -1,9 +1,3 @@
-/* 
- * Example source code
- * 
- * prints N numbers from Fibonacci sequence
- */
-
 void main(void) {
     int i;
     int N;
@@ -16,9 +10,9 @@ void main(void) {
     b = 1;
     tmp = 0;
 
-    N = 20; // how many numbers to print?
+    N = 20;
 
-    output(0); // always print the first number
+    output(0);
 
     while (i < N) {
         output(a + b);

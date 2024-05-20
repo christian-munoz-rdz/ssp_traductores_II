@@ -5,18 +5,14 @@ void main(void) {
     int b;
     int tmp;
 
-
     i = 0;
     a = 0;
     b = 1;
     tmp = 0;
 
+    N = 20;
 
-    N = 20; // how many numbers to print?
-
-
-    output(0); // always print the first number
-
+    output(0);
 
     while (i < N) {
         output(a + b);

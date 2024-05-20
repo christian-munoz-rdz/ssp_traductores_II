@@ -14,7 +14,7 @@ from semantic_analyser import SemanticAnalyser
 from code_gen import CodeGen, MemoryManager
 
 
-# Maximal virtual memory for compiled program process (in bytes).
+# Maxima memoria virtual
 MAX_VIRTUAL_MEMORY = 50 * 1024 * 1024 # 50 MB
 
 def limit_virtual_memory():
@@ -23,18 +23,18 @@ def limit_virtual_memory():
 
 
 def compile(args):
-    print("Compiling", args.source_file)
+    print("Compilando", args.source_file)
     SymbolTableManager.init()
     MemoryManager.init()
     parser = Parser(args.source_file)
     start = time.time()
     parser.parse()
     stop = time.time() - start
-    print(f"Compilation took {stop:.6f} s")
+    print(f"La compilación tomó {stop:.6f} s")
     if not SymbolTableManager.error_flag:
-        print("Compilation successful!")
+        print("Compilación Satisfactoria!")
     else:
-        print("Compilation failed due to the following errors:\n")
+        print("La compilación falló debido a los siguientes errores:\n")
         print(parser.scanner.lexical_errors)
         print(parser.syntax_errors)
         print(parser.semantic_analyzer.semantic_errors)
@@ -50,7 +50,7 @@ def compile(args):
         parser.semantic_analyzer.save_semantic_errors()
     parser.code_generator.save_output()
     if args.run and not SymbolTableManager.error_flag:
-        print("Executing compiled program")
+        print("Ejecutando el programa compilado...")
         plat = platform.system()
         if plat == "Windows":
             tester_file = os.path.join(script_dir, "interpreter", "tester_Windows.exe")
@@ -71,15 +71,15 @@ def compile(args):
                                                 stderr=stderr, timeout=10, 
                                                 preexec_fn=preexec_fn).decode("utf-8")
             except sp.TimeoutExpired:
-                print("RuntimeError: Execution timed out!")
+                print("RuntimeError: Se agotó el tiempo de ejecución!")
             else:
                 if not args.verbose:
                     tester_output = "\n".join([line.replace("PRINT", "").strip() 
                                                for line in tester_output.splitlines()
                                                if line.startswith("PRINT")])
                 stop = time.time() - start
-                print(f"Execution took {stop:.6f} s")
-            print("Program output:")
+                print(f"La ejecución tomó {stop:.6f} s")
+            print("Output:")
             print(tester_output)
 
 

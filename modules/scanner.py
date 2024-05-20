@@ -3,8 +3,7 @@ import os
 script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 class SymbolTableManager(object):
-    ''' Manages the symbol table of the compiler 
-    which is used across modules '''
+    ''' Gestiona la tabla de símbolos del compilador '''
     _global_funcs = [{
         "lexim": "output",
         "scope": 0,
@@ -70,7 +69,7 @@ class SymbolTableManager(object):
             return None
 
 
-char_to_col = {        # abbreviations in DFA
+char_to_col = {        # abreviaturas DFA
     "WHITESPACE" : 0,  # w
     "DIGIT"      : 1,  # d
     "LETTER"     : 2,  # l
@@ -79,7 +78,7 @@ char_to_col = {        # abbreviations in DFA
     "SYMBOL"     : 5,  # s
     "/"          : 6,  # /
     "\n"         : 7,  # \n
-    "OTHER"      : 8   # o (Anything else, only valid inside comment block)
+    "OTHER"      : 8   # o 
 }
 
 state_to_token = {
@@ -96,23 +95,23 @@ state_to_token = {
 }
 
 state_to_error_message = {
-    4  : "illegal number",
+    4  : "numero invalido",
     8  : "unmatched */",
-    20 : "invalid input",
-    22 : "invalid input"
+    20 : "input invalido",
+    22 : "input invalido"
 }
 
 token_dfa = (
-    # Input character types
+    # Tipos de caracteres de entrada
     #   w     d     l     *     =     s     /    \n     o
     #   0     1     2     3     4     5     6     7     8
-    (   1,    2,    5,    7,    9,   12,   13,   19,   20), # State 0 (initial state)
-    (   1, None, None, None, None, None, None,    1, None), # State 1 (whitespace)
+    (   1,    2,    5,    7,    9,   12,   13,   19,   20), # State 0 (Estado inicial)
+    (   1, None, None, None, None, None, None,    1, None), # State 1 (Espacio en blanco)
     (   3,    2,    4,    3,    3,    3,    3,    3,    4), # State 2 
-    (None, None, None, None, None, None, None, None, None), # State 3 (number)
+    (None, None, None, None, None, None, None, None, None), # State 3 (numero)
     (None, None, None, None, None, None, None, None, None), # State 4 (illegal number)
     (   6,    5,    5,    6,    6,    6,    6,    6,   20), # State 5 
-    (None, None, None, None, None, None, None, None, None), # State 6 (id or keyword)
+    (None, None, None, None, None, None, None, None, None), # State 6 (id o palabra clave)
     (  21,   21,   21,   21,   21,   21,    8,   21,   20), # State 7 
     (None, None, None, None, None, None, None, None, None), # State 8 (unmatched */)
     (  11,   11,   11,   11,   10,   11,   11,   11,   20), # State 9 
@@ -122,28 +121,27 @@ token_dfa = (
     (  22,   22,   22,   14,   22,   22,   17,   22,   22), # State 13
     (  14,   14,   14,   15,   14,   14,   14,   14,   14), # State 14
     (  14,   14,   14,   15,   14,   14,   16,   14,   14), # State 15
-    (None, None, None, None, None, None, None, None, None), # State 16 (/* comment */)
+    (None, None, None, None, None, None, None, None, None), # State 16 (/* comentario */)
     (  17,   17,   17,   17,   17,   17,   17,   18,   17), # State 17 
-    (None, None, None, None, None, None, None, None, None), # State 18 (// comment\n)
-    (  19, None, None, None, None, None, None,   19, None), # State 19 (newline + whitespace)
-    (None, None, None, None, None, None, None, None, None), # State 20 (invalid input)
+    (None, None, None, None, None, None, None, None, None), # State 18 (// comentario\n)
+    (  19, None, None, None, None, None, None,   19, None), # State 19 (nueva linea + espacio en blanco)
+    (None, None, None, None, None, None, None, None, None), # State 20 (entrada invalida)
     (None, None, None, None, None, None, None, None, None), # State 21 (symbol *)
-    (None, None, None, None, None, None, None, None, None), # State 22 (invalid comment)
+    (None, None, None, None, None, None, None, None, None), # State 22 (comentario invalido)
 )
 
-F = {1, 3, 6, 10, 11, 12, 16, 18, 19, 20, 21} # all accepting states
-Fstar = {3, 6, 11, 21}                        # accepting states that require the last character to be returned to the input stream
+F = {1, 3, 6, 10, 11, 12, 16, 18, 19, 20, 21} # todos los estados de aceptación
+Fstar = {3, 6, 11, 21}                        # estados de aceptacion que requieren que el último carácter se devuelva al flujo de entrada
 unclosed_comment_states = {14, 15, 17}       
 
-whitespaces = {' ', '\r', '\t', '\v', '\f'} # \n excluded as it has special meaning in one line comments
+whitespaces = {' ', '\r', '\t', '\v', '\f'} # \n excluido ya que tiene un significado especial en los comentarios de una línea
 
 
 class Scanner(object):
-    ''' Lexical analyzer object which tokenizes input source file 
-        according to C minus lexical specification '''
+    ''' Tokeniza el archivo fuente de entrada '''
 
     def __init__(self, input_file, chunk_size=8192, max_state_size=float("inf")):
-        assert chunk_size >= 16, "Minimum supported chunk size is 16!"
+        assert chunk_size >= 16, "La longitud del chunk debe ser al menos 16 bytes."
         if not os.path.isabs(input_file):
             input_file = os.path.join(script_dir, input_file)
         self.input_file = input_file
@@ -165,7 +163,7 @@ class Scanner(object):
         self.input = ""
         self.read_input()
 
-        # lexical specification
+        # especificacion lexica
         self._symbols = {',', ';', ':', '[', ']', '(', ')', '{', '}', '+', '-', '<'} # = and * excluded
         self.letters = {chr(i) for i in range(65, 91)} | {chr(i) for i in range(97, 123)}
         self.digits = {str(i) for i in range(0, 10)}
@@ -192,7 +190,7 @@ class Scanner(object):
         lexical_errors = []
         if self._lexical_errors:
             for lineno, lexim, error in self._lexical_errors:
-                lexical_errors.append(f"#{lineno} : Lexical Error! '{lexim}' rejected, reason: {error}.\n")
+                lexical_errors.append(f"#{lineno} : Error Lexico! '{lexim}' rechazado, razon: {error}.\n")
         else:
             lexical_errors.append("No hay errores léxicos.\n")
         return "".join(lexical_errors)
@@ -259,8 +257,8 @@ class Scanner(object):
             for i in range(num_lines):
                 self.tokens[self.line_number + i + 1] = []
             self.line_number += num_lines
-            # remove leading whitespace from next line
-            # (expect newlines as we need them for line number calculations)
+            # eliminar los espacios en blanco de la línea siguiente
+            # (espera nuevas líneas ya que las necesitamos para calcular el número de línea)
             self.input = self.input.lstrip(" ").lstrip("\t")
 
 
@@ -275,7 +273,7 @@ class Scanner(object):
         save_state = None
         error_occurred = False
         input_ended = False
-        s = 0 # initial state
+        s = 0 # estado inicial
 
         if len(self.tokens.keys()) > self.max_state_size:
             self.tokens.pop(self.first_line, None)
@@ -284,7 +282,7 @@ class Scanner(object):
         if len(self._lexical_errors) > self.max_state_size:
             self._lexical_errors.pop(0)
 
-        while True: # Loop until we find valid token
+        while True: # Loop hasta que se encuentre un token válido
             if not self.input or input_ended:
                 try:
                     self.read_input()
@@ -295,7 +293,7 @@ class Scanner(object):
                         if len(self.input) > len(err_token):
                             err_token = err_token + " ..."
                         SymbolTableManager.error_flag = True
-                        self._lexical_errors.append((self.line_number, err_token, "unclosed comment"))
+                        self._lexical_errors.append((self.line_number, err_token, "Comentario no cerrado"))
                     self.line_number += self.input.count("\n")
                     self.input = ""
                     return ("EOF", "$")
@@ -307,7 +305,7 @@ class Scanner(object):
             s = 0 if save_state is None else save_state 
             save_state = None
 
-            # traverse the dfa as long as we can with the remaining input
+            # recorrer el dfa tanto como podamos con la entrada restante
             for i in range(len(self.input) + 1):
                 try:
                     a = self.input[i]
@@ -316,29 +314,28 @@ class Scanner(object):
                 col = self._resolve_dfa_table_column(a)
                 next_s = token_dfa[s][col]
 
-                if s in state_to_error_message: # are we in an error state?
+                if s in state_to_error_message: # ¿estamos en estado de error?
                     if s == 22:
-                        i -= 1 # this is a lookahead error state (invalid comment)
+                        i -= 1 # se trata de un estado de error lookahead (comentario no válido)
                     lexim, error = self.input[:i], state_to_error_message[s]
                     if self.max_state_size > 0:
                         SymbolTableManager.error_flag = True
                         self._lexical_errors.append((self.line_number, lexim, error))
                     else:
-                        print(f"Lexical Error in line {self.line_number}: {error} '{lexim}'")
-                    self.input = self.input[i:] # skip invalid token (panic mode)
+                        print(f"Error Lexico en la linea {self.line_number}: {error} '{lexim}'")
+                    self.input = self.input[i:] # saltar token no válido 
                     error_occurred = True
                     break
                 
-                if s in F: # are we in an accepting state?
+                if s in F: # estamos en un estado de aceptación?
                     if s in Fstar:
                         token_candidates.append((s, self.input[:i-1]))
                     else:
                         token_candidates.append((s, self.input[:i]))
 
-                if next_s is None: # can we continue traversing dfa?
+                if next_s is None: # ¿podemos seguir atravesando el dfa?
                     break
-                elif i >= len(self.input): # do we have enough input to do so?
-                    # this only occurs for large files or small chunk size
+                elif i >= len(self.input): # tenemos que leer más
                     if next_s not in F:
                         save_state = next_s
                     input_ended = True
@@ -350,20 +347,20 @@ class Scanner(object):
                 continue
             
             if token_candidates:
-                max_token = token_candidates[-1] # pick maximal munch
+                max_token = token_candidates[-1] 
                 state, lexim = max_token
-                self.input = self.input[len(lexim):] # advance in the input
+                self.input = self.input[len(lexim):] # avanzar el puntero de entrada
                 token = state_to_token[state]
 
-                if token == "WHITESPACE" or token == "COMMENT": # these will not be returned
-                    self._switch_line(lexim.count("\n")) # update line number etc
-                    continue # proceed to next token
+                if token == "WHITESPACE" or token == "COMMENT": # esto no sera retornado
+                    self._switch_line(lexim.count("\n")) # actualizar el número de línea
+                    continue # pasa al siguiente token
 
-                if token == "ID_OR_KEYWORD": # distinguish between ids and keywords
+                if token == "ID_OR_KEYWORD": # distinguir entre ids y palabras clave
                     token = "KEYWORD" if lexim in self.keywords else "ID"
 
                 if self.max_state_size > 0:
-                    self.tokens[self.line_number].append((token, lexim)) # save tokens later for printing
+                    self.tokens[self.line_number].append((token, lexim)) # guarda los tokens para imprimirlos
                 
                 if token == "ID":
                     if lexim not in self.identifiers:

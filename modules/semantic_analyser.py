@@ -1,10 +1,3 @@
-'''
-Semantic Analyser module of the Simple C Compiler
-
-Author:             Pasi Pyrrö
-Date:               16 March 2020
-'''
-
 import os
 from scanner import SymbolTableManager
 from code_gen import MemoryManager
@@ -14,7 +7,7 @@ script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 class SemanticAnalyser(object):
     def __init__(self):
 
-        # routines
+        # métodos
         self.semantic_checks = {
             "#SA_INC_SCOPE" : self.inc_scope_routine,
             "#SA_DEC_SCOPE" : self.dec_scope_routine,
@@ -56,7 +49,7 @@ class SemanticAnalyser(object):
             "#SA_TYPE_CHECK" : self.type_check_routine,
         }
 
-        # associated stacks
+        # pilas asociadas
         self.semantic_stacks = {
             "main_check" : [],
             "type_assign" : [],
@@ -64,16 +57,16 @@ class SemanticAnalyser(object):
             "fun_check" : [],
         }
 
-        # flags
+        # banderas
         self.main_found = False
         self.main_not_last = False
 
-        # counters
+        # contadores
         self.arity_counter = 0
         self.while_counter = 0
         self.switch_counter = 0
 
-        # lists
+        # listas
         self.fun_param_list = []
         self.fun_arg_list = []
         self._semantic_errors = []
@@ -91,9 +84,9 @@ class SemanticAnalyser(object):
         semantic_errors = []
         if self._semantic_errors:
             for lineno, error in self._semantic_errors:
-                semantic_errors.append(f"#{lineno} : Semantic Error! {error}\n")
+                semantic_errors.append(f"#{lineno} : Error Semántico! {error}\n")
         else:
-            semantic_errors.append("The input program is semantically correct.\n")
+            semantic_errors.append("El programa no tiene errores semánticos.\n")
         return "".join(semantic_errors)
 
 
@@ -109,7 +102,7 @@ class SemanticAnalyser(object):
             f.write(self.semantic_errors)
 
 
-    ''' semantic routines start here '''
+    ''' Funciones semánticas '''
 
 
     def inc_scope_routine(self, input_token, line_number):
@@ -162,8 +155,8 @@ class SemanticAnalyser(object):
                 symbol_row["role"] = "global_var"
             if symbol_row["type"] == "void":
                 SymbolTableManager.error_flag = True
-                self._semantic_errors.append((line_number, "Illegal type of void for '{}'.".format(symbol_row["lexim"])))
-                symbol_row.pop("type") # void types are not considered to be defined
+                self._semantic_errors.append((line_number, "Void invalido para '{}'.".format(symbol_row["lexim"])))
+                symbol_row.pop("type") 
             if input_token[1] == "[":
                 symbol_row["type"] = "array"
 
@@ -216,7 +209,7 @@ class SemanticAnalyser(object):
             SymbolTableManager.symbol_table[symbol_idx]["arity"] = len(params)
             SymbolTableManager.symbol_table[symbol_idx]["params"] = params
             self.fun_param_list = []
-            SymbolTableManager.temp_stack.append(0) # init temp counter for this function
+            SymbolTableManager.temp_stack.append(0) # inicializar contador temporal
 
 
     def check_main_routine(self, input_token, line_number):
@@ -227,7 +220,7 @@ class SemanticAnalyser(object):
 
             if not self.main_found:
                 self.main_found = (top_three == main_signature and self.scope == 1)
-            # check whether main is the last global function definition 
+            # comprobar si main es la última definición de función global
             elif not self.main_not_last and self.main_found and self.scope == 1:
                 self.main_not_last = True
 
@@ -239,7 +232,7 @@ class SemanticAnalyser(object):
         if "type" not in SymbolTableManager.symbol_table[input_token[1]]:
             lexim = self._get_lexim(input_token)
             SymbolTableManager.error_flag = True
-            self._semantic_errors.append((line_number, f"'{lexim}' is not defined."))
+            self._semantic_errors.append((line_number, f"'{lexim}' No está definido."))
 
     
     def save_fun_routine(self, input_token, line_number):
@@ -256,14 +249,14 @@ class SemanticAnalyser(object):
                 self.semantic_stacks["type_check"] = self.semantic_stacks["type_check"][:len(args)]
                 if SymbolTableManager.symbol_table[fun_id]["arity"] != len(args):
                     SymbolTableManager.error_flag = True
-                    self._semantic_errors.append((line_number, f"Mismatch in numbers of arguments of '{lexim}'."))
+                    self._semantic_errors.append((line_number, f"No coincide el número de argumentos en '{lexim}'."))
                 else:
                     params = SymbolTableManager.symbol_table[fun_id]["params"]
                     i = 1
                     for param, arg in zip(params, args):
                         if param != arg and arg is not None:
                             SymbolTableManager.error_flag = True
-                            self._semantic_errors.append((line_number, f"Mismatch in type of argument {i} of '{lexim}'. Expected '{param}' but got '{arg}' instead."))
+                            self._semantic_errors.append((line_number, f"No coincide el tipo de argumento en {i} of '{lexim}'. Se esperaba '{param}' pero se recibió '{arg}'."))
                         i += 1
 
 
@@ -274,7 +267,7 @@ class SemanticAnalyser(object):
     def check_while_routine(self, input_token, line_number):
         if self.while_counter <= 0:
             SymbolTableManager.error_flag = True
-            self._semantic_errors.append((line_number, f"No 'while' found for 'continue'"))
+            self._semantic_errors.append((line_number, f"No se encontró while para 'continue'"))
 
 
     def pop_while_routine(self, input_token, line_number):
@@ -288,7 +281,7 @@ class SemanticAnalyser(object):
     def check_break_routine(self, input_token, line_number):
         if self.while_counter <= 0 and self.switch_counter <= 0:
             SymbolTableManager.error_flag = True
-            self._semantic_errors.append((line_number, "No 'while' or 'switch' found for 'break'."))
+            self._semantic_errors.append((line_number, "No se encontró 'while' o 'switch' para 'break'."))
 
 
     def pop_switch_routine(self, input_token, line_number):
@@ -321,28 +314,25 @@ class SemanticAnalyser(object):
                 if operand_a_type == "array":
                     SymbolTableManager.error_flag = True
                     self._semantic_errors.append((line_number, 
-                        f"Type mismatch in operands, Got '{operand_a_type}' instead of 'int'."))
+                        f"No coinciden los tipos para los operandos, Se recibió '{operand_a_type}' en lugar de 'int'."))
                 elif operand_a_type != operand_b_type:
                     SymbolTableManager.error_flag = True
                     self._semantic_errors.append((line_number, 
-                        f"Type mismatch in operands, Got '{operand_b_type}' instead of '{operand_a_type}'."))
+                        f"No coinciden los tipos para los operandos, Se recibió '{operand_b_type}' en lugar de '{operand_a_type}'."))
                 else:
                     self.semantic_stacks["type_check"].append(operand_a_type)
         except IndexError:
             pass
 
 
-    ''' semantic routines end here '''
-
-
     def semantic_check(self, action_symbol, input_token, line_number):
         try:
             self.semantic_checks[action_symbol](input_token, line_number)
         except Exception as e:
-            print(f"{line_number} : Error in semantic routine {action_symbol}:", str(e))
+            print(f"{line_number} : Error en función semántica {action_symbol}:", str(e))
 
 
     def eof_check(self, line_number):
         if not self.main_found or self.main_not_last:
             SymbolTableManager.error_flag = True
-            self._semantic_errors.append((line_number, "main function not found!"))
+            self._semantic_errors.append((line_number, "No se encontró la función main!"))

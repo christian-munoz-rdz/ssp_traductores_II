@@ -1,17 +1,10 @@
-'''
-Intermediate Code Generator module of the Simple C Compiler
-
-Author:             Pasi Pyrrö
-Date:               1 April 2020
-'''
-
 import os
 from scanner import SymbolTableManager
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
 class MemoryManager(object):
-    ''' Manages shared information about memory locations '''
+    ''' Gestiona información compartida sobre ubicaciones de memoria '''
 
     @classmethod
     def init(cls):
@@ -27,12 +20,11 @@ class MemoryManager(object):
         cls.arrays_field_offset = 0
         cls.temps_field_offset  = 0
 
-        cls.pb_index = 0  # program block index
+        cls.pb_index = 0  # indice del bloque de programa
 
 
     @classmethod
     def reset(cls):
-        ''' call this when finished creating stack frame '''
         cls.args_field_offset  = 4
         cls.locals_field_offset = 0
         cls.array_field_offset = 0
@@ -118,7 +110,7 @@ class CodeGen(object):
     
     @property
     def stack_frame_ptr_addr(self):
-        ''' memory location for runtime stack frame pointer variable '''
+        ''' Ubicación de memoria para la variable de puntero del marco de pila en tiempo de ejecución '''
         return MemoryManager.static_base_ptr
 
 
@@ -195,9 +187,9 @@ class CodeGen(object):
         if isinstance(operand, int):
             addr = operand
         elif "address" in operand:
-            addr = operand["address"] # static address
+            addr = operand["address"] # direccion estatica
         else:
-            # need to calculate dynamic address
+            # calculo de direccion dinamica
             t_arg_addr = MemoryManager.get_temp()
             self._add_three_addr_code(self._get_add_code(self.stack_frame_ptr_addr, f"#{operand['offset']}", t_arg_addr))
             addr = f"@{t_arg_addr}"
@@ -210,7 +202,7 @@ class CodeGen(object):
                 for lineno, three_addr_code in self.program_block:
                     f.write(f"{lineno}\t{three_addr_code}\n")
             else:
-                f.write("Failed to generate output program.\n")
+                f.write("Fallo al generar programa.\n")
 
 
     ''' semantic routines begin here '''
@@ -232,7 +224,7 @@ class CodeGen(object):
         three_addr_code = self._get_three_addr_code("assign", f"#{MemoryManager.stack_base_ptr}", 
                                   self.stack_frame_ptr_addr)
         self._add_three_addr_code(three_addr_code)
-        # allocate space for stack ptr and print address (+0 and +4)
+        # asignar espacio para pila ptr e imprimir dirección (+0 y +4)
         MemoryManager.static_offset += 8
         for _ in range(3):
             self._add_placeholder()
@@ -284,7 +276,7 @@ class CodeGen(object):
 
 
     def finish_program_routine(self, input_token):
-        # back patch main jump here
+        # salto principal del parche trasero aquí
         t_ret_addr = MemoryManager.get_temp()
         self.program_block[1] = (1, self._get_sub_code(self.stack_frame_ptr_addr, "#4", t_ret_addr))
         self.program_block[2] = (2, self._get_three_addr_code("assign", f"#{MemoryManager.pb_index}", f"@{t_ret_addr}"))
@@ -292,7 +284,7 @@ class CodeGen(object):
 
 
     def call_seq_caller_routine(self, input_token, backpatch=False):
-        ''' expects semantic stack to contain:
+        ''' espera pila semántica para continuar:
             ----------------------------------
             ss(top)         = arg_n addr
             ...
@@ -315,7 +307,7 @@ class CodeGen(object):
 
         if callee["lexim"] == "output":
             arg = stack.pop()
-            stack.pop() # pop output row off the stack
+            stack.pop() # sacar la fila de salida de la pila
             arg_addr = self._resolve_addr(arg)
             self._add_three_addr_code(self._get_three_addr_code("assign", arg_addr, self.print_addr))
             self._add_three_addr_code(self._get_three_addr_code("PRINT", self.print_addr))
@@ -327,12 +319,12 @@ class CodeGen(object):
             t_ret_val = MemoryManager.get_temp()
         
         if "frame_size" in caller:
-            # current top_sp and access link pointer
+            # top_sp actual y puntero de enlace de acceso
             top_sp = self.stack_frame_ptr_addr
             frame_size = caller["frame_size"]
             t_new_top_sp = MemoryManager.get_temp()
             self._add_three_addr_code(self._get_add_code(top_sp, f"#{frame_size}", t_new_top_sp), insert=backpatch)
-            # assign access link address to new stack frame
+            # asignar la dirección del enlace de acceso al nuevo marco de pila
             self._add_three_addr_code(self._get_three_addr_code("assign", top_sp, f"@{t_new_top_sp}"), insert=backpatch)
             t_args = MemoryManager.get_temp()
             self._add_three_addr_code(self._get_add_code(t_new_top_sp, "#4", t_args), insert=backpatch)
@@ -344,38 +336,38 @@ class CodeGen(object):
                 if isinstance(arg, int):
                     arg_addr = arg
                 elif "address" in arg:
-                    arg_addr = arg["address"]  # static address
+                    arg_addr = arg["address"]  # dirección estática
                 else:
-                    # need to calculate dynamic address
+                    # necesidad de calcular la dirección dinámica
                     t_arg_addr = MemoryManager.get_temp()
                     self._add_three_addr_code(self._get_add_code(self.stack_frame_ptr_addr, f"#{arg['offset']}", t_arg_addr), 
                                               insert=backpatch)
                     arg_addr = f"@{t_arg_addr}"
                 if callee["params"][-i-1] == "array":
-                    arg_addr = f"#{arg}" # pass by reference
+                    arg_addr = f"#{arg}" # pasar por referencia
                 self._add_three_addr_code(self._get_three_addr_code("assign", arg_addr, f"@{t_args}"), insert=backpatch)
                 self._add_three_addr_code(self._get_add_code(t_args, "#4", t_args), insert=backpatch)
             fun_addr = stack.pop()["address"] 
-            # put pointers for return address and return value in temp variables 
+            # poner punteros para la dirección de retorno y el valor de retorno en variables temporales
             t_ret_addr = MemoryManager.get_temp()
             t_ret_val_callee = MemoryManager.get_temp()
             self._add_three_addr_code(self._get_sub_code(t_new_top_sp, "#4", t_ret_addr), insert=backpatch)
             self._add_three_addr_code(self._get_sub_code(t_new_top_sp, "#8", t_ret_val_callee), insert=backpatch)
-            # increment stack frame pointer by frame size TODO: update stack pointer via access link and static offset
+            # incrementar el puntero del marco de la pila por tamaño del marco TODO: actualizar el puntero de la pila a través del enlace de acceso y el desplazamiento estático
             # self._add_three_addr_code(self._get_add_code(top_sp, f"#{frame_size}", top_sp), insert=backpatch)
             self._add_three_addr_code(self._get_three_addr_code("assign", t_new_top_sp, top_sp), insert=backpatch)
             # self._add_three_addr_code(self._get_three_addr_code("print", top_sp), insert=backpatch)
-            # assign value for return address in callee stack frame
+            # asignar valor para la dirección del remitente en el marco de la pila del destinatario
             self._add_three_addr_code(self._get_three_addr_code("assign", f"#{MemoryManager.pb_index + 2}", f"@{t_ret_addr}"), 
                                       insert=backpatch)
-            # jump to function address
+            # saltar a la dirección de función
             self._add_three_addr_code(self._get_three_addr_code("jp", fun_addr), insert=backpatch)
-            # fetch the return value to a temporary and push it to the stack
+            # buscar el valor de retorno en un temporal y enviarlo a la pila
             self._add_three_addr_code(self._get_three_addr_code("assign", f"@{t_ret_val_callee}", t_ret_val), insert=backpatch)
-            # decrement stack frame pointer by frame size
+            # disminuir el puntero del marco de la pila por el tamaño del marco
             self._add_three_addr_code(self._get_sub_code(top_sp, f"#{frame_size}", top_sp), insert=backpatch)
             # self._add_three_addr_code(self._get_three_addr_code("print", top_sp), insert=backpatch)
-        else: # in recursive calls we need to backpatch
+        else: # en llamadas recursivas necesitamos parchear
             callee = stack[-(self.arg_counter[-1] + 1)]
             self.call_seq_stack += self.semantic_stack[-(self.arg_counter[-1] + 1):]
             num_offset_vars = 0
@@ -389,7 +381,7 @@ class CodeGen(object):
             self.call_seq_stack.append(t_ret_val)
             self.call_seq_stack.append(callee)
             
-            for _ in range(10 + callee["arity"]*2 + num_offset_vars): # reserve space for call seq
+            for _ in range(10 + callee["arity"]*2 + num_offset_vars): # reservar espacio para llamada seq
                 self._add_placeholder()
 
         if backpatch:
@@ -406,8 +398,6 @@ class CodeGen(object):
 
 
     def calc_stackframe_size_routine(self, input_token):
-        ''' Calculates size of callee's stack frame and local variable field 
-            and stores it into symbol table '''
         scope_stack, symbol_table = self._get_context_info()
         fun_row = SymbolTableManager.get_enclosing_fun()
         fun_row["args_size"] = 0
@@ -439,7 +429,7 @@ class CodeGen(object):
 
     
     def set_retval_routine(self, input_token):
-        # save return value address into temp variable
+        # guardar la dirección del valor de retorno en la variable temporal
         t = MemoryManager.get_temp()
         self._add_three_addr_code(self._get_sub_code(self.stack_frame_ptr_addr, "#8", t))
         try:
@@ -454,7 +444,7 @@ class CodeGen(object):
 
     def return_seq_callee_routine(self, input_token):
         t = MemoryManager.get_temp()
-        # save return address into temp variable
+        # guardar la dirección del remitente en la variable temporal
         self._add_three_addr_code(self._get_sub_code(self.stack_frame_ptr_addr, "#4", t))
         t2 = MemoryManager.get_temp()
         self._add_three_addr_code(self._get_three_addr_code("assign", f"@{t}", t2))
@@ -463,7 +453,7 @@ class CodeGen(object):
 
     def close_stmt_routine(self, input_token):
         if self.semantic_stack:
-            self.semantic_stack.pop() # pop result of last assignment
+            self.semantic_stack.pop() # elimina resultado de la última tarea
 
     
     def label_routine(self, input_token):
@@ -531,12 +521,9 @@ class CodeGen(object):
             pass
 
 
-    ''' Semantic routines end here '''
-
-
     def code_gen(self, action_symbol, input_token):
         if not SymbolTableManager.error_flag:
             try:
                 self.semantic_routines[action_symbol](input_token)
             except Exception as e:
-                print(f"Error in semantic routine {action_symbol}:", str(e))
+                print(f"Error semántico {action_symbol}:", str(e))

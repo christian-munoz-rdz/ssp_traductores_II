@@ -1,10 +1,3 @@
-'''
-Parser module of the Simple C Compiler
-
-Author:             Pasi Pyrrö
-Date:               20 March 2020
-'''
-
 import os
 from anytree import Node, RenderTree, PreOrderIter
 from scanner import Scanner, SymbolTableManager
@@ -157,7 +150,7 @@ productions = (
     "EMPTY"                                                 
 )
 
-productions = tuple([p.split() for p in productions]) # split productions into arrays
+productions = tuple([p.split() for p in productions]) # dividir producciones en arrays
 
 terminal_to_col = {
     "ID"        : 0,
@@ -306,7 +299,7 @@ class Parser(object):
         self.semantic_analyzer = SemanticAnalyser()
         self.code_generator = CodeGen()
         self._syntax_errors = []
-        self.root = Node("Program") # Start symbol
+        self.root = Node("Program") # Simbolo de inicio
         self.parse_tree = self.root
         self.stack = [Node("$"), self.root]
         
@@ -321,7 +314,7 @@ class Parser(object):
             for lineno, error in self._syntax_errors:
                 syntax_errors.append(f"#{lineno} : Syntax Error! {error}\n")
         else:
-            syntax_errors.append("There is no syntax error.\n")
+            syntax_errors.append("No hau errores sintácticos.\n")
         return "".join(syntax_errors)
 
 
@@ -341,7 +334,7 @@ class Parser(object):
     
     def _remove_node(self, node):
         try:
-            # remove node from the parse tree
+            # eliminar nodo del árbol de análisis
             parent = list(node.iter_path_reverse())[1]
             parent.children = [c for c in parent.children if c != node]
         except IndexError:
@@ -349,7 +342,7 @@ class Parser(object):
 
 
     def _clean_up_tree(self):
-        ''' remove non terminals and unmet terminals from leaf nodes '''
+        ''' eliminar terminales no terminales y terminales no satisfechos de los nodos hoja '''
         remove_nodes = []
         for node in PreOrderIter(self.parse_tree):
             if not node.children and not hasattr(node, "token") and node.name != "EPSILON":
@@ -366,23 +359,23 @@ class Parser(object):
         self.code_generator.code_gen("INIT_PROGRAM", None)
         while True:
             token_type, a = token
-            if token_type in ("ID", "NUM"):   # parser won't understand the lexim input in this case
+            if token_type in ("ID", "NUM"):   # El analizador no entenderá la entrada Lexema en este caso.
                 a = token_type
 
-            current_node = self.stack[-1]     # check the top of the stack
+            current_node = self.stack[-1]     # revisa la parte superior de la pila
             X = current_node.name
 
-            if X.startswith("#SA"):             # X is an action symbol for semantic analyzer
+            if X.startswith("#SA"):             # X es un símbolo de acción para el analizador semántico.
                 if X == "#SA_DEC_SCOPE" and a == "ID":
                     curr_lexim = self.scanner.id_to_lexim(token[1])
                 self.semantic_analyzer.semantic_check(X, token, self.scanner.line_number)
                 self.stack.pop()
                 if X == "#SA_DEC_SCOPE" and a == "ID":
                     token = (token[0], self.scanner.update_symbol_table(curr_lexim))
-            elif X.startswith("#CG"):           # X is an action symbol for code generator
+            elif X.startswith("#CG"):           # X es un símbolo de acción para el generador de código.
                 self.code_generator.code_gen(X, token)
                 self.stack.pop()
-            elif X in terminal_to_col.keys():   # X is a terminal
+            elif X in terminal_to_col.keys():   # X es un terminal
                 if X == a:
                     if X == "$":
                         break
@@ -391,14 +384,14 @@ class Parser(object):
                     token = self.scanner.get_next_token()
                 else:
                     SymbolTableManager.error_flag = True
-                    if X == "$": # parse stack unexpectedly exhausted
+                    if X == "$": # Analizar pila inesperadamente agotada
                         # self._clean_up_tree()
                         break
-                    self._syntax_errors.append((self.scanner.line_number, f'Missing "{X}"'))
+                    self._syntax_errors.append((self.scanner.line_number, f'"{X}" Faltante'))
                     self.stack.pop()
                     clean_up_needed = True
-            else:                               # X is non-terminal
-                # look up parsing table which production to use
+            else:                               # X es un no-terminal
+                # busca en la tabla de análisis qué producción usar
                 col = terminal_to_col[a]
                 row = non_terminal_to_row[X]
                 prod_idx = parsing_table[row][col]
@@ -407,17 +400,17 @@ class Parser(object):
                 if "SYNCH" in rhs:
                     SymbolTableManager.error_flag = True
                     if a == "$":
-                        self._syntax_errors.append((self.scanner.line_number, "Unexpected EndOfFile"))
+                        self._syntax_errors.append((self.scanner.line_number, "EndOfFile Inesperado"))
                         # self._clean_up_tree()
                         clean_up_needed = True
                         break
                     missing_construct = non_terminal_to_missing_construct[X]
-                    self._syntax_errors.append((self.scanner.line_number, f'Missing "{missing_construct}"'))
+                    self._syntax_errors.append((self.scanner.line_number, f'"{missing_construct}" Faltante'))
                     self._remove_node(current_node)
                     self.stack.pop()
                 elif "EMPTY" in rhs:
                     SymbolTableManager.error_flag = True
-                    self._syntax_errors.append((self.scanner.line_number, f'Illegal "{a}"'))
+                    self._syntax_errors.append((self.scanner.line_number, f'"{a}" Inválido'))
                     token = self.scanner.get_next_token()
                 else:
                     self.stack.pop()
@@ -431,7 +424,7 @@ class Parser(object):
                         if node.name != "EPSILON":
                             self.stack.append(node)
 
-                # print(f"{X} -> {' '.join(rhs)}")  # prints out the productions used
+                # print(f"{X} -> {' '.join(rhs)}")  # imprime las producciones usadas
                 new_nodes = []
 
         self.semantic_analyzer.eof_check(self.scanner.line_number)
@@ -448,7 +441,7 @@ def main(input_path):
     start = time.time()
     parser.parse()
     stop = time.time() - start
-    print(f"Parsing took {stop:.6f} s")
+    print(f"Análisis sintáctico hecho en {stop:.6f} s")
     parser.save_parse_tree()
     parser.save_syntax_errors()
     parser.scanner.save_lexical_errors()
